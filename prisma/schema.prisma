@@ -1,0 +1,150 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+  accounts      Account[]
+  sessions      Session[]
+  merchant      Merchant?
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Merchant {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name            String
+  slug            String   @unique
+  logoUrl         String?
+  primaryColor    String   @default("#1c1914")
+  backgroundColor String   @default("#f4efe6")
+  accentColor     String   @default("#c45c26")
+  gradientEnd     String   @default("#e4d3b8")
+  fontFamily      String   @default("fraunces")
+  templateId      String   @default("cream")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  program         Program?
+}
+
+model Program {
+  id             String     @id @default(cuid())
+  merchantId     String     @unique
+  merchant       Merchant   @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  stampsRequired Int        @default(10)
+  rewardLabel    String     @default("Free item")
+  description    String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  customers      Customer[]
+  campaigns      Campaign[]
+}
+
+model Customer {
+  id                String    @id @default(cuid())
+  programId         String
+  program           Program   @relation(fields: [programId], references: [id], onDelete: Cascade)
+  email             String
+  name              String
+  marketingOptIn    Boolean   @default(false)
+  welcomeOfferRedeemed Boolean @default(false)
+  unsubscribeToken  String    @unique
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  passes            Pass[]
+
+  @@unique([programId, email])
+}
+
+model Pass {
+  id                 String              @id @default(cuid())
+  customerId         String
+  customer           Customer            @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  serial             String              @unique
+  platform           String
+  stampCount         Int                 @default(0)
+  authenticationToken String
+  googleObjectId     String?
+  lastMessage        String?
+  updatedAt          DateTime            @updatedAt
+  createdAt          DateTime            @default(now())
+  appleRegistrations AppleRegistration[]
+  events             StampEvent[]
+}
+
+model AppleRegistration {
+  id                      String   @id @default(cuid())
+  passId                  String
+  pass                    Pass     @relation(fields: [passId], references: [id], onDelete: Cascade)
+  deviceLibraryIdentifier String
+  pushToken               String
+  updatedAt               DateTime @updatedAt
+
+  @@unique([passId, deviceLibraryIdentifier])
+}
+
+model StampEvent {
+  id        String   @id @default(cuid())
+  passId    String
+  pass      Pass     @relation(fields: [passId], references: [id], onDelete: Cascade)
+  type      String
+  staffId   String?
+  createdAt DateTime @default(now())
+}
+
+model Campaign {
+  id        String    @id @default(cuid())
+  programId String
+  program   Program   @relation(fields: [programId], references: [id], onDelete: Cascade)
+  channel   String
+  subject   String?
+  body      String
+  status    String    @default("draft")
+  sentCount Int       @default(0)
+  createdAt DateTime  @default(now())
+  sentAt    DateTime?
+}

@@ -1,26 +1,140 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --paper: #f3eadc;
+  --ink: #1c1914;
+  --muted: #6b645b;
+  --card: #fffaf2;
+  --line: #ddcfc0;
+  --stamp: #c45c26;
+  --forest: #2f463c;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-card: var(--card);
+  --color-line: var(--line);
+  --color-stamp: var(--stamp);
+  --color-forest: var(--forest);
+  --font-sans: var(--font-body);
+  --font-serif: var(--font-display);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body), "Segoe UI", sans-serif;
+}
+
+a {
+  color: inherit;
+}
+
+.field {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 0.75rem 0.9rem;
+  font-size: 1rem;
+  color: var(--ink);
+}
+
+.field:focus {
+  outline: 2px solid var(--stamp);
+  outline-offset: 1px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 0;
+  padding: 0.8rem 1.15rem;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.btn-accent {
+  background: var(--stamp);
+  color: #fff8f2;
+}
+
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--line);
+}
+
+.reward-celebration {
+  animation: reward-pop 500ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.reward-stars span {
+  position: absolute;
+  color: var(--stamp);
+  font-size: 1rem;
+  opacity: 0;
+  animation: reward-star 1.8s ease-out infinite;
+}
+
+.reward-stars span:nth-child(1) { left: 8%; animation-delay: 0ms; }
+.reward-stars span:nth-child(2) { left: 18%; animation-delay: 280ms; }
+.reward-stars span:nth-child(3) { left: 29%; animation-delay: 560ms; }
+.reward-stars span:nth-child(4) { left: 40%; animation-delay: 120ms; }
+.reward-stars span:nth-child(5) { left: 51%; animation-delay: 720ms; }
+.reward-stars span:nth-child(6) { left: 62%; animation-delay: 360ms; }
+.reward-stars span:nth-child(7) { left: 73%; animation-delay: 840ms; }
+.reward-stars span:nth-child(8) { left: 84%; animation-delay: 180ms; }
+.reward-stars span:nth-child(9) { left: 92%; animation-delay: 620ms; }
+.reward-stars span:nth-child(10) { left: 24%; animation-delay: 940ms; }
+.reward-stars span:nth-child(11) { left: 67%; animation-delay: 1040ms; }
+.reward-stars span:nth-child(12) { left: 46%; animation-delay: 1180ms; }
+
+@keyframes reward-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes reward-star {
+  0% {
+    opacity: 0;
+    transform: translateY(9rem) rotate(0deg) scale(0.5);
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-2rem) rotate(240deg) scale(1.2);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reward-celebration,
+  .reward-stars span {
+    animation: none;
+  }
 }

@@ -1,36 +1,39 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Keeps
 
-## Getting Started
+Wallet-first stamp cards for local shops. Customers join with a QR, the card lands in Apple Wallet or Google Wallet, staff stamp from a phone, and the shop can send Wallet push plus email.
 
-First, run the development server:
+## Local setup
+
+1. Copy `.env.example` to `.env` and set `AUTH_SECRET` (`openssl rand -base64 32`).
+2. Install Node 22+, then:
 
 ```bash
+npm install
+npx prisma db push
+npm run db:seed
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+3. Open [http://localhost:3000](http://localhost:3000).
+4. Merchant login: `owner@keeps.local` / `keeps-demo`.
+5. Customer join: [http://localhost:3000/join/demo-cafe](http://localhost:3000/join/demo-cafe).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Without Apple/Google/Resend credentials the product runs in **demo mode**: cards are issued in the database, the join page shows a preview with a scannable QR, and stamp/redeem still updates counts. Emails print a subject line to the server log instead of sending.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Go live
 
-## Learn More
+You hold one Apple Pass Type ID and one Google Wallet issuer for every shop.
 
-To learn more about Next.js, take a look at the following resources:
+- Apple Developer Program, Pass Type ID, signing certificate, WWDR cert (base64 in env), HTTPS `APP_URL`
+- Google Cloud Wallet API + issuer account; paste the service account JSON into `GOOGLE_SERVICE_ACCOUNT_JSON`
+- Resend domain (SPF/DKIM) for magic-link login and campaigns
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Product map
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `/` marketing
+- `/login` merchant auth
+- `/dashboard` stats + join QR
+- `/stamp` camera stamp pad
+- `/customers` list
+- `/campaigns` Wallet push + opted-in email
+- `/join/[slug]` public enrollment
