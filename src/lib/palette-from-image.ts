@@ -56,9 +56,8 @@ export async function paletteFromImage(file: File): Promise<{
   const light = ranked.find((item) => luminance(item.color) > 0.72)?.color;
   const dark = ranked.find((item) => luminance(item.color) < 0.35)?.color;
   const punch = ranked.find((item) => saturation(item.color) > 0.28)?.color;
-  const mid = ranked[0]?.color ?? { r: 244, g: 239, b: 230 };
 
-  const background = light ?? { r: 244, g: 239, b: 230 };
+  const background = light ?? ranked[0]?.color ?? { r: 244, g: 239, b: 230 };
   const primary = dark ?? { r: 28, g: 25, b: 20 };
   const accent = punch ?? { r: 196, g: 92, b: 38 };
   const gradient = {

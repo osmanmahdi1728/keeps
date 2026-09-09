@@ -7,6 +7,7 @@ const links = [
   { href: "/customers", label: "Customers" },
   { href: "/campaigns", label: "Campaigns" },
   { href: "/program", label: "Card" },
+  { href: "/website", label: "Website" },
 ] as const;
 
 export function MerchantNav({ shopName }: { shopName: string }) {

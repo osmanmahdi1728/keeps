@@ -1,5 +1,13 @@
 import type { Metadata } from "next";
-import { Fraunces, Source_Sans_3 } from "next/font/google";
+import {
+  Cormorant_Garamond,
+  DM_Sans,
+  Fraunces,
+  Outfit,
+  Playfair_Display,
+  Source_Sans_3,
+  Space_Grotesk,
+} from "next/font/google";
 import "./globals.css";
 
 const display = Fraunces({
@@ -12,6 +20,36 @@ const body = Source_Sans_3({
   subsets: ["latin"],
 });
 
+const playfair = Playfair_Display({
+  variable: "--font-playfair",
+  subsets: ["latin"],
+});
+
+const cormorant = Cormorant_Garamond({
+  variable: "--font-cormorant",
+  weight: ["500", "600"],
+  subsets: ["latin"],
+});
+
+const dmSans = DM_Sans({
+  variable: "--font-dm-sans",
+  subsets: ["latin"],
+});
+
+const outfit = Outfit({
+  variable: "--font-outfit",
+  subsets: ["latin"],
+});
+
+const spaceGrotesk = Space_Grotesk({
+  variable: "--font-space-grotesk",
+  subsets: ["latin"],
+});
+
+const cardFonts = [display, body, playfair, cormorant, dmSans, outfit, spaceGrotesk]
+  .map((font) => font.variable)
+  .join(" ");
+
 export const metadata: Metadata = {
   title: "Keeps — Wallet stamp cards for local shops",
   description:
@@ -20,15 +58,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${display.variable} ${body.variable} h-full`}>
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=DM+Sans:wght@500;600&family=Outfit:wght@500;600&family=Playfair+Display:wght@500;600&family=Space+Grotesk:wght@500;600&display=swap"
-          rel="stylesheet"
-        />
-      </head>
+    <html lang="en" className={`${cardFonts} h-full`}>
       <body className="min-h-full antialiased">{children}</body>
     </html>
   );

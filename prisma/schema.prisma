@@ -66,6 +66,15 @@ model Merchant {
   gradientEnd     String   @default("#e4d3b8")
   fontFamily      String   @default("fraunces")
   templateId      String   @default("cream")
+  siteTemplate    String   @default("storefront")
+  siteKind        String   @default("cafe")
+  neighborhood    String   @default("")
+  hours           String   @default("Open daily")
+  knownFor        String   @default("")
+  instagram       String   @default("")
+  tagline         String   @default("")
+  about           String   @default("")
+  sitePublished   Boolean  @default(true)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   program         Program?

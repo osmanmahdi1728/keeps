@@ -49,8 +49,8 @@ export default async function DashboardPage() {
           <Link className="btn btn-primary" href="/stamp">
             Open stamp pad
           </Link>
-          <Link className="btn btn-ghost" href="/program">
-            Edit card design
+          <Link className="btn btn-ghost" href="/website">
+            Shop website
           </Link>
         </div>
       </section>

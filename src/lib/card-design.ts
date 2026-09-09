@@ -18,12 +18,16 @@ export type CardTemplate = {
 };
 
 export const CARD_FONTS: { id: CardFontId; label: string; css: string }[] = [
-  { id: "fraunces", label: "Fraunces", css: '"Fraunces", ui-serif, serif' },
-  { id: "playfair", label: "Playfair", css: '"Playfair Display", ui-serif, serif' },
-  { id: "cormorant", label: "Cormorant", css: '"Cormorant Garamond", ui-serif, serif' },
-  { id: "dm-sans", label: "DM Sans", css: '"DM Sans", ui-sans-serif, sans-serif' },
-  { id: "outfit", label: "Outfit", css: '"Outfit", ui-sans-serif, sans-serif' },
-  { id: "space-grotesk", label: "Space Grotesk", css: '"Space Grotesk", ui-sans-serif, sans-serif' },
+  { id: "fraunces", label: "Fraunces", css: "var(--font-display), ui-serif, serif" },
+  { id: "playfair", label: "Playfair", css: "var(--font-playfair), ui-serif, serif" },
+  { id: "cormorant", label: "Cormorant", css: "var(--font-cormorant), ui-serif, serif" },
+  { id: "dm-sans", label: "DM Sans", css: "var(--font-dm-sans), ui-sans-serif, sans-serif" },
+  { id: "outfit", label: "Outfit", css: "var(--font-outfit), ui-sans-serif, sans-serif" },
+  {
+    id: "space-grotesk",
+    label: "Space Grotesk",
+    css: "var(--font-space-grotesk), ui-sans-serif, sans-serif",
+  },
 ];
 
 export const CARD_TEMPLATES: CardTemplate[] = [
