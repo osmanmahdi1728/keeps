@@ -5,7 +5,7 @@ Wallet-first stamp cards for local shops. Customers join with a QR, the card lan
 ## Local setup
 
 1. Copy `.env.example` to `.env` and set `AUTH_SECRET` (`openssl rand -base64 32`).
-2. Paste the Neon `DATABASE_URL` from Vercel into both `DATABASE_URL` and `DATABASE_URL_UNPOOLED`.
+2. Paste the Neon `DATABASE_URL` from Vercel into `.env`.
 3. Install Node 22+, then:
 
 ```bash
@@ -23,7 +23,7 @@ Without Apple/Google/Resend credentials the product runs in **demo mode**: cards
 
 ## Go live
 
-Vercel + Neon: set `APP_URL` and `AUTH_URL` to the Vercel URL (`https://keeps-two.vercel.app`). `DATABASE_URL` and `DATABASE_URL_UNPOOLED` come from the Neon store. Each deploy runs `prisma db push` and seeds Demo Cafe (`owner@keeps.local` / `keeps-demo`).
+Vercel + Neon: set `APP_URL` and `AUTH_URL` to the Vercel URL (`https://keeps-two.vercel.app`). `DATABASE_URL` comes from the Neon store. Each deploy runs `prisma db push` and seeds Demo Cafe (`owner@keeps.local` / `keeps-demo`).
 
 You hold one Apple Pass Type ID and one Google Wallet issuer for every shop.
 
