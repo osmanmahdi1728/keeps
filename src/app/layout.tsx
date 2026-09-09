@@ -11,7 +11,8 @@ import {
 } from "next/font/google";
 import { I18nProvider } from "@/components/I18nProvider";
 import { LocaleSwitcher } from "@/components/LocaleSwitcher";
-import { getLocale, translate } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n-server";
+import { translate } from "@/lib/i18n";
 import "./globals.css";
 
 const display = Fraunces({

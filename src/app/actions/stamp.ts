@@ -12,7 +12,8 @@ import {
 } from "@/lib/types";
 import { refreshWalletPass } from "@/lib/wallet/update";
 import { rewardReadyEmailHtml, sendEmail } from "@/lib/email/send";
-import { getLocale, translate, type Locale } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n-server";
+import { translate, type Locale } from "@/lib/i18n";
 
 const lookupSchema = z.object({
   query: z.string().trim().min(2).max(120),

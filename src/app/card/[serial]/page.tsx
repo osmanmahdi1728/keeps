@@ -6,7 +6,8 @@ import { PassCard } from "@/components/PassCard";
 import { SaveToPhone } from "@/components/SaveToPhone";
 import { cardPageUrl } from "@/lib/card-url";
 import { isAppleWalletConfigured, isGoogleWalletConfigured } from "@/lib/config";
-import { getLocale, translate } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n-server";
+import { translate } from "@/lib/i18n";
 
 export async function generateMetadata({
   params,

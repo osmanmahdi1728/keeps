@@ -1,5 +1,3 @@
-import { cookies } from "next/headers";
-
 export const locales = ["en", "fr"] as const;
 export type Locale = (typeof locales)[number];
 
@@ -7,11 +5,6 @@ export const localeCookieName = "keeps-locale";
 
 export function parseLocale(value: string | null | undefined): Locale {
   return value === "fr" ? "fr" : "en";
-}
-
-export async function getLocale(): Promise<Locale> {
-  const cookieStore = await cookies();
-  return parseLocale(cookieStore.get(localeCookieName)?.value);
 }
 
 const dictionaries = {

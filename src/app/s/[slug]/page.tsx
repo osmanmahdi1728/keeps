@@ -3,7 +3,8 @@ import { prisma } from "@/lib/db";
 import { JoinForm } from "@/components/JoinForm";
 import { PassCard } from "@/components/PassCard";
 import { fontCss } from "@/lib/card-design";
-import { getLocale, translate } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n-server";
+import { translate } from "@/lib/i18n";
 
 export default async function ShopSitePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;

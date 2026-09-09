@@ -8,7 +8,8 @@ import { signIn, signOut } from "@/auth";
 import { prisma } from "@/lib/db";
 import { slugify } from "@/lib/ids";
 import { uniqueSlug } from "@/lib/slug";
-import { getLocale, translate } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n-server";
+import { translate } from "@/lib/i18n";
 
 const registrationSchema = z
   .object({

@@ -8,7 +8,8 @@ import { prisma } from "@/lib/db";
 import { assertNever, type CampaignChannel } from "@/lib/types";
 import { refreshWalletPass } from "@/lib/wallet/update";
 import { campaignEmailHtml, sendEmail } from "@/lib/email/send";
-import { getLocale, translate } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n-server";
+import { translate } from "@/lib/i18n";
 
 const campaignSchema = z.object({
   channel: z.enum(["wallet", "email"]),

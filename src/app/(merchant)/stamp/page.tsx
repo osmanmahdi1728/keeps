@@ -1,5 +1,6 @@
 import { StampDesk } from "@/components/StampDesk";
-import { getLocale, translate } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n-server";
+import { translate } from "@/lib/i18n";
 
 export default async function StampPage() {
   const locale = await getLocale();

@@ -9,7 +9,8 @@ import { uniqueSlug } from "@/lib/slug";
 import { slugify } from "@/lib/ids";
 import { isCardFont } from "@/lib/card-design";
 import { saveMerchantLogo } from "@/lib/logo";
-import { getLocale, translate } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n-server";
+import { translate } from "@/lib/i18n";
 
 const onboardingSchema = z.object({
   name: z.string().trim().min(2).max(80),

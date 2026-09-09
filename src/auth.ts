@@ -7,7 +7,8 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { isResendConfigured } from "@/lib/config";
 import { magicLinkEmailHtml, sendEmail } from "@/lib/email/send";
-import { getLocale, translate } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n-server";
+import { translate } from "@/lib/i18n";
 
 const providers: Provider[] = [
   Credentials({

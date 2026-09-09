@@ -2,7 +2,8 @@ import { WebsiteEditor } from "@/components/WebsiteEditor";
 import { requireMerchant } from "@/lib/guards";
 import { appUrl } from "@/lib/ids";
 import { isSiteAiConfigured } from "@/lib/site-ai";
-import { getLocale, translate } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n-server";
+import { translate } from "@/lib/i18n";
 import { assembleSiteData } from "@/lib/site-migrate";
 import {
   type LocalizedText,

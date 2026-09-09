@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { getCurrentMerchant } from "@/lib/merchant";
 import { OnboardingForm } from "@/components/OnboardingForm";
-import { getLocale, translate } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n-server";
+import { translate } from "@/lib/i18n";
 
 export default async function OnboardingPage() {
   const session = await auth();

@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { getLocale, translate } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n-server";
+import { translate } from "@/lib/i18n";
 
 export default async function HomePage() {
   const locale = await getLocale();
