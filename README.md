@@ -23,7 +23,7 @@ Without Apple/Google/Resend credentials the product runs in **demo mode**: cards
 
 ## Go live
 
-Vercel + Neon: set `APP_URL` and `AUTH_URL` to the Vercel URL (`https://keeps-two.vercel.app`). `DATABASE_URL` comes from the Neon store. Each deploy runs `prisma db push` and seeds Demo Cafe (`owner@keeps.local` / `keeps-demo`).
+Vercel + Neon: set `AUTH_SECRET` and set `APP_URL` to the Vercel URL (`https://keeps-two.vercel.app`). Leave `AUTH_URL` unset there — `trustHost` reads the origin from the request. `DATABASE_URL` comes from the Neon store. Each deploy runs `prisma db push` and seeds Demo Cafe (`owner@keeps.local` / `keeps-demo`).
 
 You hold one Apple Pass Type ID and one Google Wallet issuer for every shop.
 

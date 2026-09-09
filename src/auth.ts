@@ -10,6 +10,21 @@ import { magicLinkEmailHtml, sendEmail } from "@/lib/email/send";
 import { getLocale } from "@/lib/i18n-server";
 import { translate } from "@/lib/i18n";
 
+// Auth.js calls new URL() on these during every render, so a malformed value
+// crashes the whole app. trustHost derives the origin from request headers.
+for (const key of ["AUTH_URL", "NEXTAUTH_URL"] as const) {
+  const value = process.env[key];
+  if (!value) {
+    continue;
+  }
+  try {
+    new URL(value);
+  } catch {
+    console.warn(`Ignoring ${key}: not a valid URL.`);
+    delete process.env[key];
+  }
+}
+
 const providers: Provider[] = [
   Credentials({
     name: "Demo login",
