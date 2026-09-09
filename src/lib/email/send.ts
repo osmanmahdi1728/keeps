@@ -130,3 +130,14 @@ export function magicLinkEmailHtml(url: string, locale: Locale = "en"): string {
     locale,
   );
 }
+
+export function passwordResetEmailHtml(url: string, locale: Locale = "en"): string {
+  const t = (key: Parameters<typeof translate>[1]) => translate(locale, key);
+  return emailLayout(
+    "Keeps",
+    `<h1 style="font-size:28px;margin:0 0 12px">${t("resetEmailTitle")}</h1>
+     <p style="line-height:1.6">${t("resetEmailBody")}</p>
+     <p><a href="${escapeHtml(url)}" style="color:#c45c26">${t("resetEmailAction")}</a></p>`,
+    locale,
+  );
+}

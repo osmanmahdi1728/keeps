@@ -14,9 +14,10 @@ model User {
   emailVerified DateTime?
   image         String?
   passwordHash  String?
-  accounts      Account[]
-  sessions      Session[]
-  merchant      Merchant?
+  accounts             Account[]
+  sessions             Session[]
+  merchant             Merchant?
+  passwordResetTokens  PasswordResetToken[]
 }
 
 model Account {
@@ -51,6 +52,17 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expires   DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 model Merchant {

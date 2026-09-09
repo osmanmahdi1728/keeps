@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import { loginWithEmail, loginWithPassword } from "@/app/actions/auth";
 import { useI18n } from "@/components/I18nProvider";
@@ -39,6 +40,11 @@ export function LoginForm({
         <button className="btn btn-primary w-full" type="submit">
           {t("signIn")}
         </button>
+        <p className="text-right text-sm">
+          <Link href="/login/forgot" className="text-muted underline">
+            {t("forgotPassword")}
+          </Link>
+        </p>
       </form>
       {magicLinkEnabled ? (
         <form action={emailAction} className="space-y-3 border-t border-line pt-6">
