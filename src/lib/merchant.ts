@@ -11,6 +11,14 @@ export const getCurrentMerchant = cache(async () => {
 
   return prisma.merchant.findUnique({
     where: { userId },
-    include: { program: true },
+    include: {
+      program: true,
+      siteSections: {
+        orderBy: [{ position: "asc" }, { createdAt: "asc" }],
+      },
+      siteMenuItems: {
+        orderBy: [{ position: "asc" }, { createdAt: "asc" }],
+      },
+    },
   });
 });
