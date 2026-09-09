@@ -75,9 +75,98 @@ model Merchant {
   tagline         String   @default("")
   about           String   @default("")
   sitePublished   Boolean  @default(true)
+  siteVersion     Int      @default(1)
+  googlePlaceId   String?
+  placeSyncedAt   DateTime?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   program         Program?
+  siteSections    SiteSection[]
+  siteMedia       SiteMedia[]
+  siteMenuItems   SiteMenuItem[]
+  placeSnapshot   GooglePlaceSnapshot?
+
+  @@index([googlePlaceId])
+}
+
+model SiteSection {
+  id         String         @id @default(cuid())
+  merchantId String
+  merchant   Merchant       @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  key        String
+  type       String
+  position   Int            @default(0)
+  enabled    Boolean        @default(true)
+  content    Json
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  media      SiteMedia[]
+  menuItems  SiteMenuItem[]
+
+  @@unique([merchantId, key])
+  @@index([merchantId, position])
+  @@index([merchantId, type])
+}
+
+model SiteMedia {
+  id         String       @id @default(cuid())
+  merchantId String
+  merchant   Merchant     @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  sectionId  String?
+  section    SiteSection? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+  key        String
+  kind       String       @default("image")
+  url        String       @db.Text
+  alt        Json
+  position   Int          @default(0)
+  width      Int?
+  height     Int?
+  metadata   Json?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  menuItems  SiteMenuItem[]
+
+  @@unique([merchantId, key])
+  @@index([merchantId, position])
+  @@index([sectionId, position])
+}
+
+model SiteMenuItem {
+  id          String       @id @default(cuid())
+  merchantId  String
+  merchant    Merchant     @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  sectionId   String?
+  section     SiteSection? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+  mediaId     String?
+  media       SiteMedia?   @relation(fields: [mediaId], references: [id], onDelete: SetNull)
+  key         String
+  name        Json
+  description Json?
+  category    Json?
+  priceCents  Int?
+  currency    String       @default("CAD")
+  position    Int          @default(0)
+  available   Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([merchantId, key])
+  @@index([merchantId, position])
+  @@index([sectionId, position])
+  @@index([mediaId])
+}
+
+model GooglePlaceSnapshot {
+  id         String   @id @default(cuid())
+  merchantId String   @unique
+  merchant   Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  placeId    String
+  payload    Json
+  syncedAt   DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([placeId])
 }
 
 model Program {
