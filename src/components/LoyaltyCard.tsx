@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n } from "@/components/I18nProvider";
+
 export type LoyaltyCardProps = {
   merchantName: string;
   rewardLabel: string;
@@ -17,6 +19,7 @@ export type LoyaltyCardProps = {
 };
 
 export function LoyaltyCard(props: LoyaltyCardProps) {
+  const { t } = useI18n();
   const accent = props.accentColor ?? props.primaryColor;
   const end = props.gradientEnd ?? props.backgroundColor;
   const filled = Array.from({ length: props.stampsRequired }, (_, i) => i < props.stampCount);
@@ -31,7 +34,7 @@ export function LoyaltyCard(props: LoyaltyCardProps) {
       }}
     >
       <div className="flex items-start justify-between gap-3">
-        <p className="text-[11px] font-semibold tracking-[0.22em] uppercase opacity-70">Stamp card</p>
+        <p className="text-[11px] font-semibold tracking-[0.22em] uppercase opacity-70">{t("stampCard")}</p>
         {props.logoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -61,7 +64,7 @@ export function LoyaltyCard(props: LoyaltyCardProps) {
       <div className="mt-6 flex items-end justify-between gap-4">
         {props.qrSrc ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={props.qrSrc} alt="Card barcode" className="h-24 w-24 bg-white p-2" />
+          <img src={props.qrSrc} alt={t("cardBarcode")} className="h-24 w-24 bg-white p-2" />
         ) : (
           <div className="grid h-24 w-24 grid-cols-5 gap-0.5 bg-white p-2">
             {Array.from({ length: 25 }, (_, i) => (
@@ -74,7 +77,7 @@ export function LoyaltyCard(props: LoyaltyCardProps) {
           </div>
         )}
         <p className="max-w-[10rem] text-right text-xs leading-5 opacity-80">
-          {props.lastMessage ?? "Show this code at the counter."}
+          {props.lastMessage ?? t("showCode")}
         </p>
       </div>
     </article>

@@ -1,5 +1,6 @@
 import { CardDesigner } from "@/components/CardDesigner";
 import { requireMerchant } from "@/lib/guards";
+import { getLocale, translate } from "@/lib/i18n";
 
 export default async function ProgramPage() {
   const merchant = await requireMerchant();
@@ -7,12 +8,13 @@ export default async function ProgramPage() {
   if (!program) {
     return null;
   }
+  const locale = await getLocale();
 
   return (
     <div>
-      <h1 className="font-serif text-4xl">Card design</h1>
+      <h1 className="font-serif text-4xl">{translate(locale, "cardDesign")}</h1>
       <p className="mt-2 max-w-xl text-muted">
-        Pick a template, drop in a logo to steal the color grade, then choose type. Customers see this on their phone.
+        {translate(locale, "cardDesignHelp")}
       </p>
       <div className="mt-8">
         <CardDesigner

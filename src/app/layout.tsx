@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import {
   Cormorant_Garamond,
   DM_Sans,
@@ -8,6 +9,9 @@ import {
   Source_Sans_3,
   Space_Grotesk,
 } from "next/font/google";
+import { I18nProvider } from "@/components/I18nProvider";
+import { LocaleSwitcher } from "@/components/LocaleSwitcher";
+import { getLocale, translate } from "@/lib/i18n";
 import "./globals.css";
 
 const display = Fraunces({
@@ -50,16 +54,27 @@ const cardFonts = [display, body, playfair, cormorant, dmSans, outfit, spaceGrot
   .map((font) => font.variable)
   .join(" ");
 
-export const metadata: Metadata = {
-  title: "Keeps — Wallet stamp cards for local shops",
-  description:
-    "Issue digital stamp cards into Apple Wallet and Google Wallet. No customer app. Push and email when it is quiet.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
+  return {
+    title: translate(locale, "metadataTitle"),
+    description: translate(locale, "metadataDescription"),
+  };
+}
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const locale = await getLocale();
+
   return (
-    <html lang="en" className={`${cardFonts} h-full`}>
-      <body className="min-h-full antialiased">{children}</body>
+    <html lang={locale} className={`${cardFonts} h-full`}>
+      <body className="min-h-full antialiased">
+        <I18nProvider locale={locale}>
+          {children}
+          <Suspense>
+            <LocaleSwitcher />
+          </Suspense>
+        </I18nProvider>
+      </body>
     </html>
   );
 }

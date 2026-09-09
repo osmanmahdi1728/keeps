@@ -6,6 +6,7 @@ import { appUrl, createToken } from "@/lib/ids";
 import { isAppleWalletConfigured } from "@/lib/config";
 import { sha1Hex, zipUncompressed } from "@/lib/wallet/zip";
 import type { PassPlatform } from "@/lib/types";
+import { translate, type Locale } from "@/lib/i18n";
 
 export type WalletPassModel = {
   serial: string;
@@ -18,6 +19,7 @@ export type WalletPassModel = {
   primaryColor: string;
   lastMessage: string | null;
   logoUrl: string | null;
+  locale: Locale;
 };
 
 function hexToRgb(hex: string): string {
@@ -32,14 +34,15 @@ function hexToRgb(hex: string): string {
 
 export function passJson(model: WalletPassModel): Record<string, unknown> {
   const remaining = Math.max(model.stampsRequired - model.stampCount, 0);
-  const changeMessage = model.lastMessage ?? "Your stamp card was updated.";
+  const t = (key: Parameters<typeof translate>[1]) => translate(model.locale, key);
+  const changeMessage = model.lastMessage ?? t("walletUpdated");
   return {
     formatVersion: 1,
     passTypeIdentifier: process.env.APPLE_PASS_TYPE_ID,
     serialNumber: model.serial,
     teamIdentifier: process.env.APPLE_TEAM_ID,
     organizationName: model.merchantName,
-    description: `${model.merchantName} loyalty card`,
+    description: `${model.merchantName} — ${t("stampCard")}`,
     foregroundColor: hexToRgb(model.primaryColor),
     backgroundColor: hexToRgb(model.backgroundColor),
     labelColor: hexToRgb(model.primaryColor),
@@ -57,7 +60,7 @@ export function passJson(model: WalletPassModel): Record<string, unknown> {
       headerFields: [
         {
           key: "stamps",
-          label: "STAMPS",
+          label: t("walletStamps"),
           value: `${model.stampCount}/${model.stampsRequired}`,
           changeMessage,
         },
@@ -65,29 +68,29 @@ export function passJson(model: WalletPassModel): Record<string, unknown> {
       primaryFields: [
         {
           key: "brand",
-          label: "LOYALTY",
+          label: t("walletLoyalty"),
           value: model.merchantName,
         },
       ],
       secondaryFields: [
         {
           key: "reward",
-          label: "REWARD",
+          label: t("walletReward"),
           value: model.rewardLabel,
         },
       ],
       auxiliaryFields: [
         {
           key: "left",
-          label: "TO GO",
-          value: remaining === 0 ? "Ready" : String(remaining),
+          label: t("walletToGo"),
+          value: remaining === 0 ? t("walletReady") : String(remaining),
         },
       ],
       backFields: [
         {
           key: "message",
-          label: "Latest note",
-          value: model.lastMessage ?? "Show this card at the counter to collect a stamp.",
+          label: t("walletLatest"),
+          value: model.lastMessage ?? t("walletCollect"),
         },
       ],
     },

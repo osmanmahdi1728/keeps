@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { JoinForm } from "@/components/JoinForm";
 import { PassCard } from "@/components/PassCard";
 import { fontCss } from "@/lib/card-design";
+import { getLocale, translate } from "@/lib/i18n";
 
 export default async function ShopSitePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -18,6 +19,9 @@ export default async function ShopSitePage({ params }: { params: Promise<{ slug:
   const displayFont = fontCss(merchant.fontFamily);
   const template = merchant.siteTemplate;
   const instagram = merchant.instagram ? `https://instagram.com/${merchant.instagram}` : null;
+  const locale = await getLocale();
+  const t = (key: Parameters<typeof translate>[1], values?: Record<string, string | number>) =>
+    translate(locale, key, values);
 
   return (
     <div
@@ -37,7 +41,7 @@ export default async function ShopSitePage({ params }: { params: Promise<{ slug:
           <p className="text-xl">{merchant.name}</p>
         </div>
         <a href="#card" className="btn btn-primary" style={{ background: merchant.primaryColor, color: merchant.backgroundColor }}>
-          Get the card
+          {t("getTheCard")}
         </a>
       </header>
 
@@ -78,9 +82,12 @@ export default async function ShopSitePage({ params }: { params: Promise<{ slug:
         <section id="card" className="rounded-[28px] bg-white/70 p-6 backdrop-blur md:p-10">
           <div className="grid items-start gap-8 lg:grid-cols-2">
             <div>
-              <h2 className="text-3xl">Your stamp card</h2>
+              <h2 className="text-3xl">{t("yourStampCard")}</h2>
               <p className="mt-3 opacity-80">
-                Collect {program.stampsRequired}, then {program.rewardLabel.toLowerCase()}. No extra app.
+                {t("publicJoinHelp", {
+                  count: program.stampsRequired,
+                  reward: program.rewardLabel.toLowerCase(),
+                })}
               </p>
               <div className="mt-6">
                 <JoinForm slug={merchant.slug} shopName={merchant.name} />
@@ -102,7 +109,7 @@ export default async function ShopSitePage({ params }: { params: Promise<{ slug:
               />
             ) : (
               <p className="text-sm opacity-70">
-                After you join, save the card to your home screen and show it at the counter.
+                {t("publicSaveHelp")}
               </p>
             )}
           </div>

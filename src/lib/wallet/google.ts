@@ -3,6 +3,7 @@ import { GoogleAuth } from "google-auth-library";
 import { isGoogleWalletConfigured } from "@/lib/config";
 import { appUrl } from "@/lib/ids";
 import type { WalletPassModel } from "@/lib/wallet/apple";
+import { translate } from "@/lib/i18n";
 
 type ServiceAccount = {
   client_email: string;
@@ -33,24 +34,26 @@ export function googleSaveUrl(jwt: string): string {
 }
 
 function loyaltyClass(model: WalletPassModel, programId: string) {
+  const stamps = translate(model.locale, "walletStamps").toLocaleLowerCase(model.locale);
   return {
     id: classId(programId),
     issuerName: model.merchantName,
     reviewStatus: "UNDER_REVIEW",
-    programName: `${model.merchantName} stamps`,
+    programName: `${model.merchantName} ${stamps}`,
     hexBackgroundColor: model.backgroundColor,
   };
 }
 
 function loyaltyObject(model: WalletPassModel, programId: string) {
   const remaining = Math.max(model.stampsRequired - model.stampCount, 0);
+  const t = (key: Parameters<typeof translate>[1]) => translate(model.locale, key);
   return {
     id: objectId(model.serial),
     classId: classId(programId),
     state: "ACTIVE",
     accountId: model.serial,
     loyaltyPoints: {
-      label: "Stamps",
+      label: t("walletStamps"),
       balance: { int: model.stampCount },
     },
     barcode: {
@@ -61,18 +64,18 @@ function loyaltyObject(model: WalletPassModel, programId: string) {
     textModulesData: [
       {
         id: "reward",
-        header: "Reward",
+        header: t("walletReward"),
         body: model.rewardLabel,
       },
       {
         id: "progress",
-        header: "To go",
-        body: remaining === 0 ? "Ready to redeem" : String(remaining),
+        header: t("walletToGo"),
+        body: remaining === 0 ? t("walletReady") : String(remaining),
       },
       {
         id: "note",
-        header: "Latest note",
-        body: model.lastMessage ?? "Show this card at the counter.",
+        header: t("walletLatest"),
+        body: model.lastMessage ?? t("showCode"),
       },
     ],
     hexBackgroundColor: model.backgroundColor,

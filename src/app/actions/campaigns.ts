@@ -8,6 +8,7 @@ import { prisma } from "@/lib/db";
 import { assertNever, type CampaignChannel } from "@/lib/types";
 import { refreshWalletPass } from "@/lib/wallet/update";
 import { campaignEmailHtml, sendEmail } from "@/lib/email/send";
+import { getLocale, translate } from "@/lib/i18n";
 
 const campaignSchema = z.object({
   channel: z.enum(["wallet", "email"]),
@@ -16,6 +17,7 @@ const campaignSchema = z.object({
 });
 
 export async function sendCampaign(formData: FormData): Promise<{ error: string } | { sent: number }> {
+  const locale = await getLocale();
   const session = await auth();
   if (!session?.user?.id) {
     redirect("/login");
@@ -28,7 +30,7 @@ export async function sendCampaign(formData: FormData): Promise<{ error: string 
   });
 
   if (!parsed.success) {
-    return { error: "Write a message of at least 8 characters. Include the offer dates." };
+    return { error: translate(locale, "campaignInvalid") };
   }
 
   const merchant = await prisma.merchant.findUnique({
@@ -41,7 +43,7 @@ export async function sendCampaign(formData: FormData): Promise<{ error: string 
 
   const channel: CampaignChannel = parsed.data.channel;
   if (channel === "email" && !parsed.data.subject) {
-    return { error: "Email campaigns need a subject line." };
+    return { error: translate(locale, "campaignSubjectRequired") };
   }
 
   const campaign = await prisma.campaign.create({
@@ -79,7 +81,12 @@ export async function sendCampaign(formData: FormData): Promise<{ error: string 
         await sendEmail({
           to: customer.email,
           subject: parsed.data.subject ?? merchant.name,
-          html: campaignEmailHtml(merchant.name, parsed.data.body, customer.unsubscribeToken),
+          html: campaignEmailHtml(
+            merchant.name,
+            parsed.data.body,
+            customer.unsubscribeToken,
+            customer.locale === "fr" ? "fr" : "en",
+          ),
         });
         sent += 1;
       }

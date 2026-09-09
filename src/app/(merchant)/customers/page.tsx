@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { requireMerchant } from "@/lib/guards";
+import { getLocale, translate } from "@/lib/i18n";
 
 export default async function CustomersPage() {
   const merchant = await requireMerchant();
@@ -12,20 +13,23 @@ export default async function CustomersPage() {
     orderBy: { createdAt: "desc" },
     include: { passes: true },
   });
+  const locale = await getLocale();
+  const t = (key: Parameters<typeof translate>[1], values?: Record<string, string | number>) =>
+    translate(locale, key, values);
 
   return (
     <div>
-      <h1 className="font-serif text-4xl">Customers</h1>
-      <p className="mt-2 text-muted">{customers.length} cards issued</p>
+      <h1 className="font-serif text-4xl">{t("customers")}</h1>
+      <p className="mt-2 text-muted">{t("customersIssued", { count: customers.length })}</p>
       <div className="mt-6 overflow-x-auto rounded-2xl border border-line bg-card">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-line text-muted">
             <tr>
-              <th className="px-4 py-3 font-semibold">Name</th>
-              <th className="px-4 py-3 font-semibold">Email</th>
-              <th className="px-4 py-3 font-semibold">Stamps</th>
-              <th className="px-4 py-3 font-semibold">Wallet</th>
-              <th className="px-4 py-3 font-semibold">Marketing</th>
+              <th className="px-4 py-3 font-semibold">{t("name")}</th>
+              <th className="px-4 py-3 font-semibold">{t("email")}</th>
+              <th className="px-4 py-3 font-semibold">{t("walletStamps")}</th>
+              <th className="px-4 py-3 font-semibold">{t("wallet")}</th>
+              <th className="px-4 py-3 font-semibold">{t("marketing")}</th>
             </tr>
           </thead>
           <tbody>
@@ -39,7 +43,7 @@ export default async function CustomersPage() {
                     {pass ? `${pass.stampCount}/${merchant.program!.stampsRequired}` : "—"}
                   </td>
                   <td className="px-4 py-3 capitalize">{pass?.platform ?? "—"}</td>
-                  <td className="px-4 py-3">{customer.marketingOptIn ? "Yes" : "No"}</td>
+                  <td className="px-4 py-3">{customer.marketingOptIn ? t("yes") : t("no")}</td>
                 </tr>
               );
             })}

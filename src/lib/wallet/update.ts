@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { isAppleWalletConfigured, isGoogleWalletConfigured } from "@/lib/config";
 import { sendApplePush, type WalletPassModel } from "@/lib/wallet/apple";
 import { notifyGoogleObject, upsertGoogleLoyalty } from "@/lib/wallet/google";
+import type { Locale } from "@/lib/i18n";
 
 export function toPassModel(input: {
   serial: string;
@@ -14,6 +15,7 @@ export function toPassModel(input: {
   backgroundColor: string;
   primaryColor: string;
   logoUrl: string | null;
+  locale: Locale;
 }): WalletPassModel {
   return {
     serial: input.serial,
@@ -26,6 +28,7 @@ export function toPassModel(input: {
     backgroundColor: input.backgroundColor,
     primaryColor: input.primaryColor,
     logoUrl: input.logoUrl,
+    locale: input.locale,
   };
 }
 
@@ -57,6 +60,7 @@ export async function refreshWalletPass(passId: string): Promise<void> {
     backgroundColor: pass.customer.program.merchant.backgroundColor,
     primaryColor: pass.customer.program.merchant.primaryColor,
     logoUrl: pass.customer.program.merchant.logoUrl,
+    locale: pass.customer.locale === "fr" ? "fr" : "en",
   });
 
   if (pass.platform === "google" && isGoogleWalletConfigured()) {

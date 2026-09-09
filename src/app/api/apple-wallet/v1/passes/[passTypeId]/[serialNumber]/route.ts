@@ -31,6 +31,7 @@ export async function GET(
       backgroundColor: merchant.backgroundColor,
       primaryColor: merchant.primaryColor,
       logoUrl: merchant.logoUrl,
+      locale: auth.pass.customer.locale === "fr" ? "fr" : "en",
     }),
   );
 

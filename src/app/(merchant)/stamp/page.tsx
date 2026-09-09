@@ -1,11 +1,13 @@
 import { StampDesk } from "@/components/StampDesk";
+import { getLocale, translate } from "@/lib/i18n";
 
-export default function StampPage() {
+export default async function StampPage() {
+  const locale = await getLocale();
   return (
     <div>
-      <h1 className="font-serif text-4xl">Stamp pad</h1>
+      <h1 className="font-serif text-4xl">{translate(locale, "stampPad")}</h1>
       <p className="mt-2 max-w-xl text-muted">
-        Open this on a phone at the register. Scan the QR on the customer’s Wallet card, then add a stamp.
+        {translate(locale, "stampPadHelp")}
       </p>
       <div className="mt-8">
         <StampDesk />

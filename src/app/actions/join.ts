@@ -11,12 +11,14 @@ import { toPassModel } from "@/lib/wallet/update";
 import { upsertGoogleLoyalty } from "@/lib/wallet/google";
 import { sendEmail, welcomeEmailHtml } from "@/lib/email/send";
 import { cardPageUrl } from "@/lib/card-url";
+import { parseLocale, translate } from "@/lib/i18n";
 
 const joinSchema = z.object({
   slug: z.string().min(1),
   name: z.string().trim().min(1).max(80),
   email: z.string().trim().email().max(120),
   marketingOptIn: z.boolean(),
+  locale: z.enum(["en", "fr"]),
 });
 
 export async function joinProgram(formData: FormData): Promise<{ error: string } | undefined> {
@@ -25,10 +27,11 @@ export async function joinProgram(formData: FormData): Promise<{ error: string }
     name: formData.get("name"),
     email: String(formData.get("email") ?? "").toLowerCase(),
     marketingOptIn: formData.get("marketingOptIn") === "on",
+    locale: parseLocale(String(formData.get("locale") ?? "")),
   });
 
   if (!parsed.success) {
-    return { error: "Enter your name and a valid email." };
+    return { error: translate(parseLocale(String(formData.get("locale"))), "invalidJoin") };
   }
 
   const merchant = await prisma.merchant.findUnique({
@@ -36,7 +39,7 @@ export async function joinProgram(formData: FormData): Promise<{ error: string }
     include: { program: true },
   });
   if (!merchant?.program) {
-    return { error: "This shop is not accepting cards right now." };
+    return { error: translate(parsed.data.locale, "shopClosed") };
   }
 
   const headerList = await headers();
@@ -58,12 +61,14 @@ export async function joinProgram(formData: FormData): Promise<{ error: string }
     update: {
       name: parsed.data.name,
       marketingOptIn: parsed.data.marketingOptIn,
+      locale: parsed.data.locale,
     },
     create: {
       programId: merchant.program.id,
       email: parsed.data.email,
       name: parsed.data.name,
       marketingOptIn: parsed.data.marketingOptIn,
+      locale: parsed.data.locale,
       unsubscribeToken: createToken(),
     },
     include: { passes: true },
@@ -94,6 +99,7 @@ export async function joinProgram(formData: FormData): Promise<{ error: string }
         backgroundColor: merchant.backgroundColor,
         primaryColor: merchant.primaryColor,
         logoUrl: merchant.logoUrl,
+        locale: parsed.data.locale,
       }),
       merchant.program.id,
     );
@@ -105,11 +111,12 @@ export async function joinProgram(formData: FormData): Promise<{ error: string }
 
   await sendEmail({
     to: customer.email,
-    subject: `Your ${merchant.name} stamp card`,
+    subject: translate(parsed.data.locale, "welcomeSubject", { shop: merchant.name }),
     html: welcomeEmailHtml(
       merchant.name,
       cardPageUrl(pass.serial, pass.authenticationToken),
       customer.marketingOptIn && !customer.welcomeOfferRedeemed,
+      parsed.data.locale,
     ),
   });
 

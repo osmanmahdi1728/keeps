@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useI18n } from "@/components/I18nProvider";
 
 export function CardLiveStatus({
   rewardReady,
@@ -11,6 +12,7 @@ export function CardLiveStatus({
   rewardLabel: string;
 }) {
   const router = useRouter();
+  const { t } = useI18n();
 
   useEffect(() => {
     const refresh = () => {
@@ -36,7 +38,7 @@ export function CardLiveStatus({
   if (!rewardReady) {
     return (
       <p className="sr-only" aria-live="polite">
-        Card progress updates automatically.
+        {t("cardUpdates")}
       </p>
     );
   }
@@ -52,12 +54,11 @@ export function CardLiveStatus({
         ))}
       </div>
       <p className="relative text-xs font-semibold tracking-[0.22em] uppercase">
-        Reward unlocked
+        {t("rewardUnlocked")}
       </p>
       <h2 className="font-serif relative mt-2 text-4xl">{rewardLabel}</h2>
       <p className="relative mt-3 text-sm text-paper/80">
-        Show this screen at the counter. Staff will redeem it and your next
-        card starts automatically.
+        {t("rewardLiveHelp")}
       </p>
     </section>
   );

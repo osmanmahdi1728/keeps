@@ -5,9 +5,14 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
-import { assertNever, type StampEventType } from "@/lib/types";
+import {
+  assertNever,
+  type StampActionResult,
+  type StampEventType,
+} from "@/lib/types";
 import { refreshWalletPass } from "@/lib/wallet/update";
 import { rewardReadyEmailHtml, sendEmail } from "@/lib/email/send";
+import { getLocale, translate, type Locale } from "@/lib/i18n";
 
 const lookupSchema = z.object({
   query: z.string().trim().min(2).max(120),
@@ -28,11 +33,12 @@ async function requireMerchantProgram() {
   return merchant;
 }
 
-export async function lookupPass(formData: FormData) {
+export async function lookupPass(formData: FormData): Promise<StampActionResult> {
+  const locale = await getLocale();
   const merchant = await requireMerchantProgram();
   const parsed = lookupSchema.safeParse({ query: formData.get("query") });
   if (!parsed.success) {
-    return { error: "Scan the card QR or type the customer email." as const };
+    return { error: translate(locale, "scanRequired") };
   }
 
   const q = parsed.data.query.toLowerCase();
@@ -45,7 +51,7 @@ export async function lookupPass(formData: FormData) {
   });
 
   if (!pass) {
-    return { error: "No card found for that scan or email." as const };
+    return { error: translate(locale, "cardNotFoundLookup") };
   }
 
   return {
@@ -60,15 +66,18 @@ export async function lookupPass(formData: FormData) {
   };
 }
 
-export async function applyStampAction(formData: FormData) {
+export async function applyStampAction(formData: FormData): Promise<StampActionResult> {
   return mutatePass(formData, "stamp");
 }
 
-export async function redeemPassAction(formData: FormData) {
+export async function redeemPassAction(formData: FormData): Promise<StampActionResult> {
   return mutatePass(formData, "redeem");
 }
 
-export async function redeemNewsletterOfferAction(formData: FormData) {
+export async function redeemNewsletterOfferAction(
+  formData: FormData,
+): Promise<StampActionResult> {
+  const locale = await getLocale();
   const merchant = await requireMerchantProgram();
   const serial = String(formData.get("serial") ?? "");
   const pass = await prisma.pass.findFirst({
@@ -77,10 +86,10 @@ export async function redeemNewsletterOfferAction(formData: FormData) {
   });
 
   if (!pass) {
-    return { error: "Card not found." as const };
+    return { error: translate(locale, "cardNotFound") };
   }
   if (!pass.customer.marketingOptIn || pass.customer.welcomeOfferRedeemed) {
-    return { error: "This 15% welcome offer is not available." as const };
+    return { error: translate(locale, "welcomeUnavailable") };
   }
 
   await prisma.customer.update({
@@ -101,7 +110,11 @@ export async function redeemNewsletterOfferAction(formData: FormData) {
   };
 }
 
-async function mutatePass(formData: FormData, type: StampEventType) {
+async function mutatePass(
+  formData: FormData,
+  type: StampEventType,
+): Promise<StampActionResult> {
+  const uiLocale = await getLocale();
   const merchant = await requireMerchantProgram();
   const serial = String(formData.get("serial") ?? "");
   const pass = await prisma.pass.findFirst({
@@ -110,35 +123,36 @@ async function mutatePass(formData: FormData, type: StampEventType) {
   });
 
   if (!pass) {
-    return { error: "Card not found." as const };
+    return { error: translate(uiLocale, "cardNotFound") };
   }
 
   const required = merchant.program!.stampsRequired;
   let stampCount = pass.stampCount;
   let lastMessage = pass.lastMessage;
   let shouldEmailReward = false;
+  const customerLocale: Locale = pass.customer.locale === "fr" ? "fr" : "en";
 
   switch (type) {
     case "stamp":
       if (stampCount >= required) {
-        return { error: "Card is full. Redeem the reward first." as const };
+        return { error: translate(uiLocale, "cardFull") };
       }
       stampCount += 1;
       lastMessage =
         stampCount >= required
-          ? `Reward ready: ${merchant.program!.rewardLabel}`
-          : `Stamp ${stampCount} of ${required}.`;
+          ? translate(customerLocale, "rewardReadyNote", { reward: merchant.program!.rewardLabel })
+          : translate(customerLocale, "stampProgress", { count: stampCount, total: required });
       shouldEmailReward = stampCount >= required;
       break;
     case "redeem":
       if (stampCount < required) {
-        return { error: "Not enough stamps to redeem yet." as const };
+        return { error: translate(uiLocale, "notEnoughStamps") };
       }
       stampCount = 0;
-      lastMessage = "Reward redeemed. New card started.";
+      lastMessage = translate(customerLocale, "rewardRedeemed");
       break;
     case "adjust":
-      return { error: "Manual adjust is not in this version." as const };
+      return { error: translate(uiLocale, "manualAdjustUnavailable") };
     default:
       return assertNever(type);
   }
@@ -158,8 +172,8 @@ async function mutatePass(formData: FormData, type: StampEventType) {
   if (shouldEmailReward) {
     await sendEmail({
       to: pass.customer.email,
-      subject: `Your ${merchant.name} reward is ready`,
-      html: rewardReadyEmailHtml(merchant.name, merchant.program!.rewardLabel),
+      subject: translate(customerLocale, "rewardSubject", { shop: merchant.name }),
+      html: rewardReadyEmailHtml(merchant.name, merchant.program!.rewardLabel, customerLocale),
     });
   }
 

@@ -2,8 +2,10 @@
 
 import { useActionState } from "react";
 import { registerMerchant } from "@/app/actions/auth";
+import { useI18n } from "@/components/I18nProvider";
 
 export function SignupForm() {
+  const { t } = useI18n();
   const [state, action, pending] = useActionState(
     async (_previous: { error: string } | undefined, formData: FormData) =>
       registerMerchant(formData),
@@ -14,7 +16,7 @@ export function SignupForm() {
     <form action={action} className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block text-sm font-semibold">
-          Your name
+          {t("ownerName")}
           <input
             className="field mt-1"
             name="ownerName"
@@ -24,7 +26,7 @@ export function SignupForm() {
           />
         </label>
         <label className="block text-sm font-semibold">
-          Shop name
+          {t("shopName")}
           <input
             className="field mt-1"
             name="shopName"
@@ -35,7 +37,7 @@ export function SignupForm() {
         </label>
       </div>
       <label className="block text-sm font-semibold">
-        Business email
+        {t("businessEmail")}
         <input
           className="field mt-1"
           type="email"
@@ -47,7 +49,7 @@ export function SignupForm() {
       </label>
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block text-sm font-semibold">
-          Password
+          {t("password")}
           <input
             className="field mt-1"
             type="password"
@@ -59,7 +61,7 @@ export function SignupForm() {
           />
         </label>
         <label className="block text-sm font-semibold">
-          Confirm password
+          {t("confirmPassword")}
           <input
             className="field mt-1"
             type="password"
@@ -73,7 +75,7 @@ export function SignupForm() {
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block text-sm font-semibold">
-          Loyalty reward
+          {t("loyaltyReward")}
           <input
             className="field mt-1"
             name="rewardLabel"
@@ -83,7 +85,7 @@ export function SignupForm() {
           />
         </label>
         <label className="block text-sm font-semibold">
-          Stamps needed
+          {t("stampsNeeded")}
           <input
             className="field mt-1"
             type="number"
@@ -101,7 +103,7 @@ export function SignupForm() {
         </p>
       ) : null}
       <button className="btn btn-primary w-full" type="submit" disabled={pending}>
-        {pending ? "Creating your shop…" : "Create shop account"}
+        {pending ? t("creatingShop") : t("createShopAccount")}
       </button>
       <p className="text-xs leading-5 text-muted">
         This creates a local test account. Email verification and billing are

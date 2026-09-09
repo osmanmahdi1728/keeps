@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useI18n } from "@/components/I18nProvider";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -8,6 +9,7 @@ type BeforeInstallPromptEvent = Event & {
 };
 
 export function SaveToPhone({ cardUrl, shopName }: { cardUrl: string; shopName: string }) {
+  const { t } = useI18n();
   const [copied, setCopied] = useState(false);
   const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null);
 
@@ -50,22 +52,22 @@ export function SaveToPhone({ cardUrl, shopName }: { cardUrl: string; shopName: 
     <div className="w-full space-y-3 text-left">
       {installEvent ? (
         <button className="btn btn-primary w-full" type="button" onClick={() => void install()}>
-          Add to home screen
+          {t("addHome")}
         </button>
       ) : (
         <button className="btn btn-primary w-full" type="button" onClick={() => void share()}>
-          Save / share this card
+          {t("saveShare")}
         </button>
       )}
       <button className="btn btn-ghost w-full" type="button" onClick={() => void copyLink()}>
-        {copied ? "Link copied" : "Copy card link"}
+        {copied ? t("copied") : t("copyLink")}
       </button>
       <ol className="space-y-2 rounded-xl border border-line bg-card px-4 py-3 text-sm text-muted">
         <li>
-          <strong className="text-ink">iPhone:</strong> tap Share, then Add to Home Screen. Open that icon at the register.
+          <strong className="text-ink">iPhone:</strong> {t("iphoneHelp")}
         </li>
         <li>
-          <strong className="text-ink">Android:</strong> tap the browser menu, then Add to Home screen / Install app.
+          <strong className="text-ink">Android:</strong> {t("androidHelp")}
         </li>
       </ol>
     </div>

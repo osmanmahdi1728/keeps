@@ -6,6 +6,7 @@ import { PassCard } from "@/components/PassCard";
 import { SaveToPhone } from "@/components/SaveToPhone";
 import { cardPageUrl } from "@/lib/card-url";
 import { isAppleWalletConfigured, isGoogleWalletConfigured } from "@/lib/config";
+import { getLocale, translate } from "@/lib/i18n";
 
 export async function generateMetadata({
   params,
@@ -15,18 +16,19 @@ export async function generateMetadata({
   searchParams: Promise<{ t?: string }>;
 }): Promise<Metadata> {
   const { serial } = await params;
-  const { t } = await searchParams;
+  const { t: token } = await searchParams;
   const pass = await prisma.pass.findUnique({
     where: { serial },
     include: { customer: { include: { program: { include: { merchant: true } } } } },
   });
   const name = pass?.customer.program.merchant.name ?? "Keeps";
+  const locale = pass?.customer.locale === "fr" ? "fr" : "en";
   const manifest =
-    t && pass && t === pass.authenticationToken
-      ? `/card/${serial}/manifest?t=${encodeURIComponent(t)}`
+    token && pass && token === pass.authenticationToken
+      ? `/card/${serial}/manifest?t=${encodeURIComponent(token)}`
       : undefined;
   return {
-    title: `${name} stamp card`,
+    title: `${name} — ${translate(locale, "stampCard")}`,
     appleWebApp: {
       capable: true,
       title: name,
@@ -45,7 +47,7 @@ export default async function CardPage({
   searchParams: Promise<{ t?: string }>;
 }) {
   const { serial } = await params;
-  const { t } = await searchParams;
+  const { t: token } = await searchParams;
   const pass = await prisma.pass.findUnique({
     where: { serial },
     include: {
@@ -53,7 +55,7 @@ export default async function CardPage({
     },
   });
 
-  if (!pass || !t || t !== pass.authenticationToken) {
+  if (!pass || !token || token !== pass.authenticationToken) {
     notFound();
   }
 
@@ -61,13 +63,16 @@ export default async function CardPage({
   const program = pass.customer.program;
   const cardUrl = cardPageUrl(pass.serial, pass.authenticationToken);
   const remaining = Math.max(program.stampsRequired - pass.stampCount, 0);
+  const locale = await getLocale();
+  const t = (key: Parameters<typeof translate>[1], values?: Record<string, string | number>) =>
+    translate(locale, key, values);
 
   return (
     <div className="mx-auto flex min-h-full max-w-md flex-col items-center px-4 py-10">
-      <p className="text-xs font-semibold tracking-[0.2em] uppercase text-stamp">Your card</p>
+      <p className="text-xs font-semibold tracking-[0.2em] uppercase text-stamp">{t("yourCard")}</p>
       <h1 className="font-serif mt-2 text-center text-4xl">{merchant.name}</h1>
       <p className="mt-2 text-center text-muted">
-        {remaining === 0 ? "Reward ready — show this at the counter." : `${remaining} stamp${remaining === 1 ? "" : "s"} to go.`}
+        {remaining === 0 ? t("rewardReadyCounter") : t("stampsToGo", { count: remaining })}
       </p>
       <CardLiveStatus
         rewardReady={remaining === 0}
@@ -94,12 +99,12 @@ export default async function CardPage({
       </div>
       {isAppleWalletConfigured() ? (
         <a className="btn btn-ghost mt-4 w-full" href={`/api/passes/apple/${pass.serial}`}>
-          Also add to Apple Wallet
+          {t("alsoApple")}
         </a>
       ) : null}
       {isGoogleWalletConfigured() ? (
         <a className="btn btn-ghost mt-2 w-full" href={`/api/passes/google/${pass.serial}`}>
-          Also add to Google Wallet
+          {t("alsoGoogle")}
         </a>
       ) : null}
     </div>

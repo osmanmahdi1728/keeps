@@ -8,6 +8,7 @@ import { signIn, signOut } from "@/auth";
 import { prisma } from "@/lib/db";
 import { slugify } from "@/lib/ids";
 import { uniqueSlug } from "@/lib/slug";
+import { getLocale, translate } from "@/lib/i18n";
 
 const registrationSchema = z
   .object({
@@ -18,15 +19,12 @@ const registrationSchema = z
     confirmPassword: z.string(),
     rewardLabel: z.string().trim().min(2).max(80),
     stampsRequired: z.coerce.number().int().min(3).max(20),
-  })
-  .refine((value) => value.password === value.confirmPassword, {
-    message: "Passwords do not match.",
-    path: ["confirmPassword"],
   });
 
 export async function registerMerchant(
   formData: FormData,
 ): Promise<{ error: string } | undefined> {
+  const locale = await getLocale();
   const parsed = registrationSchema.safeParse({
     ownerName: formData.get("ownerName"),
     shopName: formData.get("shopName"),
@@ -38,18 +36,17 @@ export async function registerMerchant(
   });
 
   if (!parsed.success) {
-    return {
-      error:
-        parsed.error.issues[0]?.message ??
-        "Check your account and shop details.",
-    };
+    return { error: translate(locale, "invalidSignup") };
+  }
+  if (parsed.data.password !== parsed.data.confirmPassword) {
+    return { error: translate(locale, "passwordsMismatch") };
   }
 
   const existing = await prisma.user.findUnique({
     where: { email: parsed.data.email },
   });
   if (existing) {
-    return { error: "An account already exists for that email." };
+    return { error: translate(locale, "accountExists") };
   }
 
   const slug = await uniqueSlug(slugify(parsed.data.shopName));
@@ -83,6 +80,7 @@ export async function registerMerchant(
 }
 
 export async function loginWithPassword(formData: FormData): Promise<{ error: string } | undefined> {
+  const locale = await getLocale();
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
   const callbackUrl = String(formData.get("callbackUrl") ?? "/dashboard");
@@ -95,19 +93,20 @@ export async function loginWithPassword(formData: FormData): Promise<{ error: st
     });
   } catch (error) {
     if (error instanceof AuthError) {
-      return { error: "Those credentials did not match a merchant account." };
+      return { error: translate(locale, "invalidCredentials") };
     }
     throw error;
   }
 }
 
 export async function loginWithEmail(formData: FormData): Promise<{ error: string } | undefined> {
+  const locale = await getLocale();
   const email = String(formData.get("email") ?? "");
   try {
     await signIn("resend", { email, redirectTo: "/dashboard" });
   } catch (error) {
     if (error instanceof AuthError) {
-      return { error: "Could not send a sign-in email. Check Resend configuration." };
+      return { error: translate(locale, "magicLinkError") };
     }
     throw error;
   }

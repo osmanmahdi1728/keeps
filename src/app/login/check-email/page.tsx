@@ -1,13 +1,15 @@
 import Link from "next/link";
+import { getLocale, translate } from "@/lib/i18n";
 
-export default function CheckEmailPage() {
+export default async function CheckEmailPage() {
+  const locale = await getLocale();
   return (
     <div className="mx-auto flex min-h-full max-w-md flex-col justify-center px-4 py-16">
       <Link href="/" className="font-serif text-3xl">
         Keeps
       </Link>
-      <h1 className="font-serif mt-8 text-4xl">Check your email</h1>
-      <p className="mt-3 text-muted">If that address has a merchant account, we sent a sign-in link.</p>
+      <h1 className="font-serif mt-8 text-4xl">{translate(locale, "checkEmail")}</h1>
+      <p className="mt-3 text-muted">{translate(locale, "checkEmailHelp")}</p>
     </div>
   );
 }

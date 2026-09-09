@@ -9,6 +9,7 @@ import { uniqueSlug } from "@/lib/slug";
 import { slugify } from "@/lib/ids";
 import { isCardFont } from "@/lib/card-design";
 import { saveMerchantLogo } from "@/lib/logo";
+import { getLocale, translate } from "@/lib/i18n";
 
 const onboardingSchema = z.object({
   name: z.string().trim().min(2).max(80),
@@ -17,6 +18,7 @@ const onboardingSchema = z.object({
 });
 
 export async function completeOnboarding(formData: FormData): Promise<{ error: string } | undefined> {
+  const locale = await getLocale();
   const session = await auth();
   if (!session?.user?.id) {
     redirect("/login");
@@ -29,7 +31,7 @@ export async function completeOnboarding(formData: FormData): Promise<{ error: s
   });
 
   if (!parsed.success) {
-    return { error: "Check the shop name, reward, and stamp count." };
+    return { error: translate(locale, "onboardingInvalid") };
   }
 
   const existing = await prisma.merchant.findUnique({
@@ -74,6 +76,7 @@ const programSchema = z.object({
 export async function updateProgram(
   formData: FormData,
 ): Promise<{ error: string } | { saved: true } | undefined> {
+  const locale = await getLocale();
   const session = await auth();
   if (!session?.user?.id) {
     redirect("/login");
@@ -94,7 +97,7 @@ export async function updateProgram(
   });
 
   if (!parsed.success || !isCardFont(parsed.data.fontFamily)) {
-    return { error: "Check colors (use #hex), stamp count, and font." };
+    return { error: translate(locale, "programInvalid") };
   }
 
   const merchant = await prisma.merchant.findUnique({
@@ -110,8 +113,8 @@ export async function updateProgram(
   if (logo instanceof File && logo.size > 0) {
     try {
       logoUrl = await saveMerchantLogo(merchant.id, logo);
-    } catch (error) {
-      return { error: error instanceof Error ? error.message : "Could not save that logo." };
+    } catch {
+      return { error: translate(locale, "logoSaveError") };
     }
   }
 

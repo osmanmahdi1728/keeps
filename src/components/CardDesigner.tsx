@@ -5,6 +5,7 @@ import { updateProgram } from "@/app/actions/program";
 import { LoyaltyCard } from "@/components/LoyaltyCard";
 import { CARD_FONTS, CARD_TEMPLATES, fontCss } from "@/lib/card-design";
 import { paletteFromImage } from "@/lib/palette-from-image";
+import { useI18n } from "@/components/I18nProvider";
 
 type CardDesignerProps = {
   name: string;
@@ -21,6 +22,7 @@ type CardDesignerProps = {
 };
 
 export function CardDesigner(props: CardDesignerProps) {
+  const { t } = useI18n();
   const [name, setName] = useState(props.name);
   const [rewardLabel, setRewardLabel] = useState(props.rewardLabel);
   const [stampsRequired, setStampsRequired] = useState(props.stampsRequired);
@@ -68,9 +70,9 @@ export function CardDesigner(props: CardDesignerProps) {
       setAccentColor(palette.accentColor);
       setGradientEnd(palette.gradientEnd);
       setTemplateId("custom");
-      setPaletteNote("Colors pulled from your logo. Tweak them if needed.");
+      setPaletteNote(t("paletteSuccess"));
     } catch {
-      setPaletteNote("Logo added. Could not read a palette from that file.");
+      setPaletteNote(t("paletteFailure"));
     }
   }
 
@@ -86,14 +88,14 @@ export function CardDesigner(props: CardDesignerProps) {
         <input type="hidden" name="logoUrl" value={logoUrl.startsWith("blob:") ? props.logoUrl : logoUrl} />
 
         <section>
-          <h2 className="font-serif text-2xl">Shop</h2>
+          <h2 className="font-serif text-2xl">{t("shop")}</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <label className="block text-sm font-semibold sm:col-span-2">
-              Shop name
+              {t("shopName")}
               <input className="field mt-1" name="name" required value={name} onChange={(e) => setName(e.target.value)} />
             </label>
             <label className="block text-sm font-semibold">
-              Reward
+              {t("reward")}
               <input
                 className="field mt-1"
                 name="rewardLabel"
@@ -103,7 +105,7 @@ export function CardDesigner(props: CardDesignerProps) {
               />
             </label>
             <label className="block text-sm font-semibold">
-              Stamps needed
+              {t("stampsNeeded")}
               <input
                 className="field mt-1"
                 name="stampsRequired"
@@ -115,7 +117,7 @@ export function CardDesigner(props: CardDesignerProps) {
               />
             </label>
             <label className="block text-sm font-semibold sm:col-span-2">
-              Description
+              {t("description")}
               <textarea
                 className="field mt-1 min-h-24"
                 name="description"
@@ -127,8 +129,8 @@ export function CardDesigner(props: CardDesignerProps) {
         </section>
 
         <section>
-          <h2 className="font-serif text-2xl">Templates</h2>
-          <p className="mt-1 text-sm text-muted">Start from a look, then tune colors and type.</p>
+          <h2 className="font-serif text-2xl">{t("templates")}</h2>
+          <p className="mt-1 text-sm text-muted">{t("templatesHelp")}</p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {CARD_TEMPLATES.map((template) => (
               <button
@@ -150,10 +152,10 @@ export function CardDesigner(props: CardDesignerProps) {
         </section>
 
         <section>
-          <h2 className="font-serif text-2xl">Logo</h2>
-          <p className="mt-1 text-sm text-muted">PNG, JPG, or WebP. We pull a color grade from it.</p>
+          <h2 className="font-serif text-2xl">{t("logo")}</h2>
+          <p className="mt-1 text-sm text-muted">{t("logoHelp")}</p>
           <label className="mt-4 block text-sm font-semibold">
-            Upload logo
+            {t("uploadLogo")}
             <input
               className="field mt-1"
               type="file"
@@ -166,17 +168,17 @@ export function CardDesigner(props: CardDesignerProps) {
         </section>
 
         <section>
-          <h2 className="font-serif text-2xl">Color grade</h2>
+          <h2 className="font-serif text-2xl">{t("colorGrade")}</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <ColorField label="Ink" value={primaryColor} onChange={setPrimaryColor} />
-            <ColorField label="Card start" value={backgroundColor} onChange={setBackgroundColor} />
-            <ColorField label="Card fade" value={gradientEnd} onChange={setGradientEnd} />
-            <ColorField label="Stamp" value={accentColor} onChange={setAccentColor} />
+            <ColorField label={t("ink")} value={primaryColor} onChange={setPrimaryColor} />
+            <ColorField label={t("cardStart")} value={backgroundColor} onChange={setBackgroundColor} />
+            <ColorField label={t("cardFade")} value={gradientEnd} onChange={setGradientEnd} />
+            <ColorField label={t("stamp")} value={accentColor} onChange={setAccentColor} />
           </div>
         </section>
 
         <section>
-          <h2 className="font-serif text-2xl">Type</h2>
+          <h2 className="font-serif text-2xl">{t("type")}</h2>
           <div className="mt-4 grid gap-2 sm:grid-cols-2">
             {CARD_FONTS.map((font) => (
               <button
@@ -197,18 +199,18 @@ export function CardDesigner(props: CardDesignerProps) {
 
         {state && "error" in state ? <p className="text-sm text-stamp">{state.error}</p> : null}
         {state && "saved" in state ? (
-          <p className="text-sm text-forest">Card saved. Customers see this look next time they open it.</p>
+          <p className="text-sm text-forest">{t("cardSaved")}</p>
         ) : null}
         <button className="btn btn-primary" type="submit" disabled={pending}>
-          {pending ? "Saving…" : "Save card"}
+          {pending ? t("saving") : t("saveCard")}
         </button>
       </form>
 
       <aside className="lg:sticky lg:top-8">
-        <p className="mb-3 text-sm font-semibold">Live preview</p>
+        <p className="mb-3 text-sm font-semibold">{t("livePreview")}</p>
         <LoyaltyCard
-          merchantName={name || "Your shop"}
-          rewardLabel={rewardLabel || "Reward"}
+          merchantName={name || t("yourShop")}
+          rewardLabel={rewardLabel || t("reward")}
           stampsRequired={stampsRequired || 10}
           stampCount={3}
           logoUrl={logoUrl || null}

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { appUrl } from "@/lib/ids";
+import { translate, type Locale } from "@/lib/i18n";
 
 export async function GET(
   request: Request,
@@ -18,12 +19,14 @@ export async function GET(
   }
 
   const name = pass.customer.program.merchant.name;
+  const locale: Locale = pass.customer.locale === "fr" ? "fr" : "en";
   const startUrl = `${appUrl()}/card/${serial}?t=${encodeURIComponent(token)}`;
 
   return NextResponse.json(
     {
-      name: `${name} stamp card`,
+      name: `${name} — ${translate(locale, "stampCard")}`,
       short_name: name,
+      lang: locale,
       start_url: startUrl,
       display: "standalone",
       background_color: merchantColor(pass.customer.program.merchant.backgroundColor),

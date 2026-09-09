@@ -7,6 +7,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { isResendConfigured } from "@/lib/config";
 import { magicLinkEmailHtml, sendEmail } from "@/lib/email/send";
+import { getLocale, translate } from "@/lib/i18n";
 
 const providers: Provider[] = [
   Credentials({
@@ -45,10 +46,11 @@ if (isResendConfigured()) {
       apiKey: process.env.RESEND_API_KEY,
       from: process.env.EMAIL_FROM,
       sendVerificationRequest: async ({ identifier, url }) => {
+        const locale = await getLocale();
         await sendEmail({
           to: identifier,
-          subject: "Sign in to Keeps",
-          html: magicLinkEmailHtml(url),
+          subject: translate(locale, "magicEmailTitle"),
+          html: magicLinkEmailHtml(url, locale),
         });
       },
     }),

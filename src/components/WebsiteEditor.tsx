@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { updateWebsite } from "@/app/actions/website";
 import { SITE_KINDS, SITE_TEMPLATES } from "@/lib/site";
+import { useI18n } from "@/components/I18nProvider";
 
 type WebsiteEditorProps = {
   slug: string;
@@ -19,6 +20,7 @@ type WebsiteEditorProps = {
 };
 
 export function WebsiteEditor(props: WebsiteEditorProps) {
+  const { t } = useI18n();
   const [siteTemplate, setSiteTemplate] = useState(props.siteTemplate);
   const [siteKind, setSiteKind] = useState(props.siteKind);
   const [generate, setGenerate] = useState(true);
@@ -35,7 +37,7 @@ export function WebsiteEditor(props: WebsiteEditorProps) {
       {generate ? <input type="hidden" name="generate" value="on" /> : null}
 
       <section>
-        <h2 className="font-serif text-2xl">Template</h2>
+        <h2 className="font-serif text-2xl">{t("template")}</h2>
         <div className="mt-3 grid gap-3 sm:grid-cols-3">
           {SITE_TEMPLATES.map((template) => (
             <button
@@ -53,10 +55,10 @@ export function WebsiteEditor(props: WebsiteEditorProps) {
       </section>
 
       <section>
-        <h2 className="font-serif text-2xl">A few questions</h2>
+        <h2 className="font-serif text-2xl">{t("fewQuestions")}</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <label className="block text-sm font-semibold sm:col-span-2">
-            What kind of shop?
+            {t("kindOfShop")}
             <div className="mt-2 flex flex-wrap gap-2">
               {SITE_KINDS.map((kind) => (
                 <button
@@ -72,15 +74,15 @@ export function WebsiteEditor(props: WebsiteEditorProps) {
             </div>
           </label>
           <label className="block text-sm font-semibold">
-            Neighborhood
+            {t("neighborhood")}
             <input className="field mt-1" name="neighborhood" defaultValue={props.neighborhood} placeholder="Mile End" />
           </label>
           <label className="block text-sm font-semibold">
-            Hours
+            {t("hours")}
             <input className="field mt-1" name="hours" required defaultValue={props.hours} placeholder="Tue–Sun 8am–4pm" />
           </label>
           <label className="block text-sm font-semibold sm:col-span-2">
-            What are you known for?
+            {t("knownFor")}
             <input
               className="field mt-1"
               name="knownFor"
@@ -103,26 +105,26 @@ export function WebsiteEditor(props: WebsiteEditorProps) {
           className="mt-1"
         />
         <span>
-          Write the page for me from these answers.
+          {t("writePage")}{" "}
           {props.aiReady
-            ? " AI will polish the copy if a key is set."
-            : " Uses a fast template now. Add OPENAI_API_KEY later for AI polish."}
+            ? t("aiReady")
+            : t("aiLater")}
         </span>
       </label>
 
       <label className="flex items-start gap-3 text-sm">
         <input type="checkbox" name="sitePublished" defaultChecked={props.sitePublished} className="mt-1" />
-        <span>Publish the public shop page</span>
+        <span>{t("publishPage")}</span>
       </label>
 
       {!generate ? (
         <div className="grid gap-4">
           <label className="block text-sm font-semibold">
-            Tagline
+            {t("tagline")}
             <input className="field mt-1" name="tagline" defaultValue={props.tagline} />
           </label>
           <label className="block text-sm font-semibold">
-            About
+            {t("about")}
             <textarea className="field mt-1 min-h-28" name="about" defaultValue={props.about} />
           </label>
         </div>
@@ -136,16 +138,16 @@ export function WebsiteEditor(props: WebsiteEditorProps) {
       {state && "error" in state ? <p className="text-sm text-stamp">{state.error}</p> : null}
       {state && "saved" in state ? (
         <p className="text-sm text-forest">
-          Site saved{state.usedAi ? " with AI polish" : " from your answers"}.
+          {state.usedAi ? t("siteSavedAi") : t("siteSavedAnswers")}
         </p>
       ) : null}
 
       <div className="flex flex-wrap gap-3">
         <button className="btn btn-primary" type="submit" disabled={pending}>
-          {pending ? "Building…" : "Save website + card"}
+          {pending ? t("building") : t("saveWebsite")}
         </button>
         <a className="btn btn-ghost" href={`/s/${props.slug}`} target="_blank" rel="noreferrer">
-          Open public page
+          {t("openPublicPage")}
         </a>
       </div>
     </form>

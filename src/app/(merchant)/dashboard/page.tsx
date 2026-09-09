@@ -4,6 +4,7 @@ import { requireMerchant } from "@/lib/guards";
 import { appUrl } from "@/lib/ids";
 import { daysAgo } from "@/lib/clock";
 import { isAppleWalletConfigured, isGoogleWalletConfigured, isResendConfigured } from "@/lib/config";
+import { getLocale, translate } from "@/lib/i18n";
 
 export default async function DashboardPage() {
   const merchant = await requireMerchant();
@@ -24,33 +25,35 @@ export default async function DashboardPage() {
   ]);
 
   const joinUrl = `${appUrl()}/join/${merchant.slug}`;
+  const locale = await getLocale();
+  const t = (key: Parameters<typeof translate>[1], values?: Record<string, string | number>) =>
+    translate(locale, key, values);
 
   return (
     <div className="space-y-8">
       <div>
-        <p className="text-xs font-semibold tracking-[0.2em] uppercase text-stamp">Today at {merchant.name}</p>
-        <h1 className="font-serif mt-2 text-4xl">Keep the regulars coming back</h1>
+        <p className="text-xs font-semibold tracking-[0.2em] uppercase text-stamp">{t("todayAt", { shop: merchant.name })}</p>
+        <h1 className="font-serif mt-2 text-4xl">{t("dashboardTitle")}</h1>
       </div>
       <section className="grid gap-4 sm:grid-cols-3">
-        <Stat label="Cards issued" value={String(customers)} />
-        <Stat label="Stamps this week" value={String(stamps)} />
-        <Stat label="Rewards redeemed" value={String(redemptions)} />
+        <Stat label={t("cardsIssued")} value={String(customers)} />
+        <Stat label={t("stampsWeek")} value={String(stamps)} />
+        <Stat label={t("rewardsRedeemed")} value={String(redemptions)} />
       </section>
       <section className="rounded-2xl border border-line bg-card p-6">
-        <h2 className="font-serif text-2xl">Join QR</h2>
+        <h2 className="font-serif text-2xl">{t("joinQr")}</h2>
         <p className="mt-2 max-w-xl text-muted">
-          Print this at the counter. Customers scan, save the card on their
-          phone, and staff stamp it from the café’s phone or tablet.
+          {t("joinQrHelp")}
         </p>
         <p className="mt-4 break-all font-mono text-sm">{joinUrl}</p>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={`/api/qr/join/${merchant.slug}`} alt="Join QR" className="mt-4 h-40 w-40 bg-white p-2" />
         <div className="mt-4 flex flex-wrap gap-3">
           <Link className="btn btn-primary" href="/stamp">
-            Open stamp pad
+            {t("openStampPad")}
           </Link>
           <Link className="btn btn-ghost" href="/website">
-            Shop website
+            {t("shopWebsite")}
           </Link>
         </div>
       </section>

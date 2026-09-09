@@ -7,6 +7,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { isSiteKind, isSiteTemplate } from "@/lib/site";
 import { polishSiteCopy } from "@/lib/site-ai";
+import { getLocale, translate } from "@/lib/i18n";
 
 const siteSchema = z.object({
   siteTemplate: z.string(),
@@ -24,6 +25,7 @@ const siteSchema = z.object({
 export async function updateWebsite(
   formData: FormData,
 ): Promise<{ error: string } | { saved: true; usedAi: boolean }> {
+  const locale = await getLocale();
   const session = await auth();
   if (!session?.user?.id) {
     redirect("/login");
@@ -43,7 +45,7 @@ export async function updateWebsite(
   });
 
   if (!parsed.success || !isSiteKind(parsed.data.siteKind) || !isSiteTemplate(parsed.data.siteTemplate)) {
-    return { error: "Check the shop type, hours, and template." };
+    return { error: translate(locale, "websiteInvalid") };
   }
 
   const merchant = await prisma.merchant.findUnique({

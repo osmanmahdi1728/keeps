@@ -99,6 +99,7 @@ model Customer {
   program           Program   @relation(fields: [programId], references: [id], onDelete: Cascade)
   email             String
   name              String
+  locale            String    @default("en")
   marketingOptIn    Boolean   @default(false)
   welcomeOfferRedeemed Boolean @default(false)
   unsubscribeToken  String    @unique

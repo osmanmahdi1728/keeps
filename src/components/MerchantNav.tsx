@@ -1,16 +1,20 @@
+"use client";
+
 import Link from "next/link";
 import { logoutAction } from "@/app/actions/auth";
-
-const links = [
-  { href: "/dashboard", label: "Overview" },
-  { href: "/stamp", label: "Stamp" },
-  { href: "/customers", label: "Customers" },
-  { href: "/campaigns", label: "Campaigns" },
-  { href: "/program", label: "Card" },
-  { href: "/website", label: "Website" },
-] as const;
+import { useI18n } from "@/components/I18nProvider";
 
 export function MerchantNav({ shopName }: { shopName: string }) {
+  const { t } = useI18n();
+  const links = [
+    { href: "/dashboard", label: t("overview") },
+    { href: "/stamp", label: t("stamp") },
+    { href: "/customers", label: t("customers") },
+    { href: "/campaigns", label: t("campaigns") },
+    { href: "/program", label: t("card") },
+    { href: "/website", label: t("website") },
+  ] as const;
+
   return (
     <header className="border-b border-line bg-card/80">
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-4">
@@ -28,7 +32,7 @@ export function MerchantNav({ shopName }: { shopName: string }) {
           <span className="hidden text-muted sm:inline">{shopName}</span>
           <form action={logoutAction}>
             <button type="submit" className="text-muted underline-offset-4 hover:underline">
-              Sign out
+              {t("signOut")}
             </button>
           </form>
         </div>
