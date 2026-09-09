@@ -1,31 +1,47 @@
 const { spawnSync } = require("node:child_process");
 const path = require("node:path");
 
-const databaseUrl =
-  process.env.DATABASE_URL ||
-  process.env.POSTGRES_PRISMA_URL ||
-  process.env.POSTGRES_URL ||
-  process.env.POSTGRES_URL_NON_POOLING;
+// Vercel's Neon store exposes several aliases. Schema changes prefer a direct
+// (non-pooled) connection; the app itself is happy on the pooled one.
+const RUNTIME_KEYS = ["DATABASE_URL", "POSTGRES_PRISMA_URL", "POSTGRES_URL"];
+const DIRECT_KEYS = [
+  "DATABASE_URL_UNPOOLED",
+  "POSTGRES_URL_NON_POOLING",
+  "DATABASE_URL",
+  "POSTGRES_URL",
+];
 
-if (!databaseUrl) {
+const present = [...new Set([...RUNTIME_KEYS, ...DIRECT_KEYS])].filter(
+  (key) => process.env[key],
+);
+console.log(`Database env vars found: ${present.join(", ") || "none"}`);
+
+const pick = (keys) => keys.map((key) => process.env[key]).find(Boolean);
+const runtimeUrl = pick(RUNTIME_KEYS);
+const directUrl = pick(DIRECT_KEYS) ?? runtimeUrl;
+
+if (!runtimeUrl) {
   console.error(
-    "Missing DATABASE_URL. In Vercel, connect the Neon store or add DATABASE_URL / POSTGRES_URL.",
+    "No database URL. In Vercel, attach the Neon store or set DATABASE_URL in Settings > Environment Variables.",
   );
   process.exit(1);
 }
 
-const env = { ...process.env, DATABASE_URL: databaseUrl };
 const root = path.join(__dirname, "..");
 const bin = (name) => path.join(root, "node_modules", ".bin", name);
 
-function run(command, args) {
-  const result = spawnSync(command, args, { stdio: "inherit", env, cwd: root });
+function run(command, args, databaseUrl) {
+  const result = spawnSync(command, args, {
+    stdio: "inherit",
+    cwd: root,
+    env: { ...process.env, DATABASE_URL: databaseUrl },
+  });
   if (result.status !== 0) {
     process.exit(result.status ?? 1);
   }
 }
 
-run(bin("prisma"), ["generate"]);
-run(bin("prisma"), ["db", "push"]);
-run(process.execPath, [path.join(__dirname, "seed.js")]);
-run(bin("next"), ["build"]);
+run(bin("prisma"), ["generate"], runtimeUrl);
+run(bin("prisma"), ["db", "push", "--accept-data-loss"], directUrl);
+run(process.execPath, [path.join(__dirname, "seed.js")], directUrl);
+run(bin("next"), ["build"], runtimeUrl);
