@@ -21,6 +21,7 @@ import {
 import { getLocale } from "@/lib/i18n-server";
 import { translate } from "@/lib/i18n";
 import { assertNever } from "@/lib/types";
+import { importedBrandingSchema } from "@/lib/import-branding";
 
 const answerTextSchema = (maximum: number) =>
   localizedTextSchema.extend({
@@ -43,6 +44,8 @@ const saveWebsiteSchema = z
   .object({
     siteTemplate: z.string(),
     siteKind: z.string(),
+    merchantName: z.string().trim().min(2).max(80),
+    branding: importedBrandingSchema,
     answers: answersSchema,
     sections: siteSectionsSchema.min(1).max(12),
     menuItems: siteMenuItemsSchema.max(40),
@@ -216,6 +219,8 @@ export async function updateWebsite(
   const parsed = saveWebsiteSchema.safeParse({
     siteTemplate: formData.get("siteTemplate"),
     siteKind: formData.get("siteKind"),
+    merchantName: formData.get("merchantName"),
+    branding: parseJson(formData.get("branding")),
     answers: parseJson(formData.get("answers")),
     sections: parseJson(formData.get("sections")),
     menuItems: parseJson(formData.get("menuItems")),
@@ -227,15 +232,30 @@ export async function updateWebsite(
   }
 
   const merchant = await requireWebsiteMerchant();
+  if (!merchant.program) {
+    redirect("/onboarding");
+  }
   const legacy = getLegacyFields(parsed.data.sections, parsed.data.answers);
 
   try {
     await prisma.$transaction(async (transaction) => {
+      const pendingGoogleMedia = await transaction.siteMedia.findMany({
+        where: {
+          merchantId: merchant.id,
+          metadata: { path: ["source"], equals: "google-pending" },
+        },
+      });
       await transaction.merchant.update({
         where: { id: merchant.id },
         data: {
           siteTemplate: parsed.data.siteTemplate,
           siteKind: parsed.data.siteKind,
+          name: parsed.data.merchantName,
+          primaryColor: parsed.data.branding.primaryColor,
+          backgroundColor: parsed.data.branding.backgroundColor,
+          accentColor: parsed.data.branding.accentColor,
+          gradientEnd: parsed.data.branding.gradientEnd,
+          fontFamily: parsed.data.branding.fontFamily,
           neighborhood: parsed.data.answers.neighborhood.en,
           hours: legacy.hours,
           knownFor: parsed.data.answers.knownFor.en,
@@ -244,8 +264,36 @@ export async function updateWebsite(
           about: legacy.about,
           sitePublished: parsed.data.sitePublished,
           siteVersion: 2,
+          placeSyncedAt:
+            pendingGoogleMedia.length > 0 ? new Date() : merchant.placeSyncedAt,
         },
       });
+      if (pendingGoogleMedia.length > 0) {
+        await transaction.siteMedia.deleteMany({
+          where: {
+            merchantId: merchant.id,
+            metadata: { path: ["source"], equals: "google" },
+          },
+        });
+        for (const [index, item] of pendingGoogleMedia.entries()) {
+          const metadata =
+            item.metadata &&
+            typeof item.metadata === "object" &&
+            !Array.isArray(item.metadata)
+              ? item.metadata
+              : {};
+          await transaction.siteMedia.update({
+            where: { id: item.id },
+            data: {
+              key: `google-${index + 1}`,
+              metadata: {
+                ...metadata,
+                source: "google",
+              } as Prisma.InputJsonValue,
+            },
+          });
+        }
+      }
 
       await transaction.siteMenuItem.deleteMany({
         where: { merchantId: merchant.id },

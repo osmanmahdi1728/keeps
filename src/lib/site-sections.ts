@@ -53,6 +53,20 @@ const hoursContentSchema = z.object({
   note: localizedTextSchema.optional(),
 });
 
+// Merchants keep booking and ordering on the tool they already use, so this is the
+// one place a shop-owned external link is allowed. Imported and AI-drafted copy may
+// never populate it; see the draft validation in `site-ai.ts`.
+const bookingSchema = z.object({
+  url: z
+    .string()
+    .url()
+    .max(500)
+    .refine((value) => value.toLowerCase().startsWith("https://"), {
+      message: "Booking links must use https",
+    }),
+  label: localizedTextSchema.optional(),
+});
+
 const contactContentSchema = z.object({
   type: z.literal("contact"),
   title: localizedTextSchema,
@@ -60,8 +74,10 @@ const contactContentSchema = z.object({
   address: localizedTextSchema.optional(),
   phone: z.string().optional(),
   email: z.string().email().optional(),
+  website: z.string().url().optional(),
   instagram: z.string().optional(),
   mapUrl: z.string().url().optional(),
+  booking: bookingSchema.optional(),
 });
 
 const loyaltyContentSchema = z.object({
@@ -121,8 +137,23 @@ const imageMediaSchema = z.object({
   key: z.string().min(1),
   url: z.string().min(1),
   alt: localizedTextSchema,
+  position: z.number().int().nonnegative().default(0),
   width: z.number().int().positive().optional(),
   height: z.number().int().positive().optional(),
+  metadata: z
+    .object({
+      source: z.enum(["upload", "google", "ai", "website"]).optional(),
+      sourceUrl: z.string().url().optional(),
+      attribution: z
+        .array(
+          z.object({
+            name: z.string(),
+            uri: z.string().url().optional(),
+          }),
+        )
+        .optional(),
+    })
+    .optional(),
 });
 
 const videoMediaSchema = z.object({
@@ -130,6 +161,7 @@ const videoMediaSchema = z.object({
   key: z.string().min(1),
   url: z.string().url(),
   title: localizedTextSchema,
+  position: z.number().int().nonnegative().default(0),
   posterUrl: z.string().url().optional(),
 });
 
@@ -140,20 +172,11 @@ export const siteMediaSchema = z.discriminatedUnion("kind", [
 
 export type SiteLocale = (typeof SITE_LOCALES)[number];
 export type LocalizedText = z.infer<typeof localizedTextSchema>;
+export type SiteBooking = z.infer<typeof bookingSchema>;
 export type SiteSectionContent = z.infer<typeof siteSectionContentSchema>;
 export type SiteSection = z.infer<typeof siteSectionSchema>;
 export type SiteMenuItem = z.infer<typeof siteMenuItemSchema>;
 export type SiteMedia = z.infer<typeof siteMediaSchema>;
-
-export type DefaultSiteSectionsInput = {
-  merchantName: string;
-  neighborhood?: string;
-  knownFor?: string;
-  hours?: string;
-  rewardLabel?: string;
-  stampsRequired?: number;
-  instagram?: string;
-};
 
 export function localize(text: LocalizedText, locale: SiteLocale): string {
   return text[locale];
@@ -184,112 +207,4 @@ export function getSectionLabel(content: SiteSectionContent): LocalizedText {
     default:
       return assertNever(content);
   }
-}
-
-export function createDefaultSiteSections(
-  input: DefaultSiteSectionsInput,
-): SiteSection[] {
-  const neighborhood = input.neighborhood?.trim() || "Your neighborhood";
-  const knownFor =
-    input.knownFor?.trim() || "Thoughtful service and everyday favorites.";
-  const hours = input.hours?.trim() || "Open daily";
-  const rewardLabel = input.rewardLabel?.trim() || "a reward";
-  const stampsRequired = input.stampsRequired ?? 10;
-  const instagram = input.instagram?.trim() || undefined;
-
-  return siteSectionsSchema.parse([
-    {
-      key: "hero",
-      position: 0,
-      content: {
-        type: "hero",
-        eyebrow: { en: neighborhood, fr: neighborhood },
-        title: {
-          en: `Welcome to ${input.merchantName}`,
-          fr: `Bienvenue chez ${input.merchantName}`,
-        },
-        body: {
-          en: knownFor,
-          fr: "Un accueil attentionné et des incontournables préparés avec soin.",
-        },
-        primaryAction: {
-          label: { en: "Get the loyalty card", fr: "Obtenir la carte fidélité" },
-          href: "#loyalty",
-        },
-        secondaryAction: {
-          label: { en: "See the menu", fr: "Voir le menu" },
-          href: "#menu",
-        },
-      },
-    },
-    {
-      key: "about",
-      position: 10,
-      content: {
-        type: "about",
-        title: { en: "Made for the neighborhood", fr: "Pensé pour le quartier" },
-        body: {
-          en: `${input.merchantName} is a place to slow down, enjoy something good, and feel at home.`,
-          fr: `${input.merchantName}, c’est un endroit où ralentir, savourer et se sentir chez soi.`,
-        },
-        highlights: [],
-      },
-    },
-    {
-      key: "menu",
-      position: 20,
-      content: {
-        type: "menu",
-        title: { en: "Menu highlights", fr: "Les incontournables" },
-        body: {
-          en: "A focused selection, made well.",
-          fr: "Une sélection soignée, préparée comme il faut.",
-        },
-        showPrices: true,
-      },
-    },
-    {
-      key: "hours",
-      position: 30,
-      content: {
-        type: "hours",
-        title: { en: "Hours", fr: "Heures d’ouverture" },
-        entries: [
-          {
-            day: { en: "Every day", fr: "Tous les jours" },
-            hours: { en: hours, fr: hours },
-          },
-        ],
-      },
-    },
-    {
-      key: "loyalty",
-      position: 40,
-      content: {
-        type: "loyalty",
-        title: { en: "Regulars deserve more", fr: "Les habitués méritent plus" },
-        body: {
-          en: `Collect ${stampsRequired} stamps and enjoy ${rewardLabel.toLowerCase()}.`,
-          fr: `Cumulez ${stampsRequired} étampes et profitez de votre récompense.`,
-        },
-        action: {
-          label: { en: "Add your card", fr: "Ajouter votre carte" },
-          href: "#card",
-        },
-      },
-    },
-    {
-      key: "contact",
-      position: 50,
-      content: {
-        type: "contact",
-        title: { en: "Come say hello", fr: "Venez nous voir" },
-        body: {
-          en: `Find us in ${neighborhood}.`,
-          fr: `Retrouvez-nous à ${neighborhood}.`,
-        },
-        instagram,
-      },
-    },
-  ]);
 }

@@ -25,7 +25,7 @@ export default async function DashboardPage() {
     }),
   ]);
 
-  const joinUrl = `${appUrl()}/join/${merchant.slug}`;
+  const joinUrl = `${appUrl()}/s/${merchant.slug}#loyalty`;
   const locale = await getLocale();
   const t = (key: Parameters<typeof translate>[1], values?: Record<string, string | number>) =>
     translate(locale, key, values);

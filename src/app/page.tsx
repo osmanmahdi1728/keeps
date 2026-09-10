@@ -58,6 +58,13 @@ export default async function HomePage() {
           <Feature title={t("featureStampTitle")} body={t("featureStampBody")} />
           <Feature title={t("featureEmailTitle")} body={t("featureEmailBody")} />
         </section>
+        <section className="border-t border-line py-14">
+          <p className="text-xs font-semibold tracking-[0.22em] uppercase text-stamp">{t("homeWhoEyebrow")}</p>
+          <div className="mt-8 grid gap-6 md:grid-cols-2">
+            <Feature title={t("homeWhoSelfcare")} body={t("homeWhoSelfcareBody")} />
+            <Feature title={t("homeWhoCrave")} body={t("homeWhoCraveBody")} />
+          </div>
+        </section>
       </main>
     </div>
   );

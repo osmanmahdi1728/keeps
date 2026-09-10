@@ -4,7 +4,7 @@ import { appUrl } from "@/lib/ids";
 import { isSiteAiConfigured } from "@/lib/site-ai";
 import { getLocale } from "@/lib/i18n-server";
 import { translate } from "@/lib/i18n";
-import { assembleSiteData } from "@/lib/site-migrate";
+import { assembleSiteData, parseStoredSiteMedia } from "@/lib/site-migrate";
 import {
   type LocalizedText,
   type SiteSection,
@@ -60,7 +60,7 @@ function getEditorAnswers(
 
 export default async function WebsitePage() {
   const merchant = await requireMerchant();
-  const siteUrl = `${appUrl()}/s/${merchant.slug}`;
+  const siteUrl = `${appUrl()}/s/${merchant.slug}#loyalty`;
   const locale = await getLocale();
   const siteData = assembleSiteData({
     merchant,
@@ -68,6 +68,9 @@ export default async function WebsitePage() {
     menuItems: merchant.siteMenuItems,
   });
   const answers = getEditorAnswers(siteData.sections, merchant);
+  const media = parseStoredSiteMedia(merchant.siteMedia, {
+    includePending: true,
+  });
 
   return (
     <div>
@@ -95,9 +98,12 @@ export default async function WebsitePage() {
           siteKind={merchant.siteKind}
           sitePublished={merchant.sitePublished}
           aiReady={isSiteAiConfigured()}
+          googleReady={Boolean(process.env.GOOGLE_PLACES_API_KEY)}
+          blobReady={Boolean(process.env.BLOB_READ_WRITE_TOKEN)}
           answers={answers}
           sections={siteData.sections}
           menuItems={siteData.menuItems}
+          media={media}
           branding={{
             logoUrl: merchant.logoUrl,
             primaryColor: merchant.primaryColor,

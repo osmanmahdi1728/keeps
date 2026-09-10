@@ -10,11 +10,15 @@ import {
   generateWebsiteDraft,
   updateWebsite,
 } from "@/app/actions/website";
+import type { BusinessImportResult } from "@/app/actions/business-import";
+import { BusinessImporter } from "@/components/BusinessImporter";
 import { useI18n } from "@/components/I18nProvider";
+import { SiteMediaManager } from "@/components/SiteMediaManager";
 import { WebsiteEditorPreview } from "@/components/WebsiteEditorPreview";
 import { SITE_KINDS, SITE_TEMPLATES } from "@/lib/site";
 import {
   type LocalizedText,
+  type SiteMedia,
   type SiteMenuItem,
   type SiteSection,
   type SiteSectionContent,
@@ -28,6 +32,8 @@ type WebsiteEditorProps = {
   siteKind: string;
   sitePublished: boolean;
   aiReady: boolean;
+  googleReady: boolean;
+  blobReady: boolean;
   answers: {
     neighborhood: LocalizedText;
     hours: LocalizedText;
@@ -35,6 +41,7 @@ type WebsiteEditorProps = {
   };
   sections: SiteSection[];
   menuItems: SiteMenuItem[];
+  media: SiteMedia[];
   branding: {
     logoUrl: string | null;
     primaryColor: string;
@@ -217,7 +224,7 @@ function SectionEditor({
             value={content.address ?? { en: "", fr: "" }}
             onChange={(address) => onChange({ ...content, address })}
           />
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             <label className="text-xs font-semibold text-muted">
               {t("editorPhone")}
               <input
@@ -252,6 +259,60 @@ function SectionEditor({
                 }
               />
             </label>
+            <label className="text-xs font-semibold text-muted">
+              {t("editorWebsiteUrl")}
+              <input
+                className="field mt-1"
+                type="url"
+                value={content.website ?? ""}
+                onChange={(event) =>
+                  onChange({
+                    ...content,
+                    website: event.target.value || undefined,
+                  })
+                }
+              />
+            </label>
+          </div>
+          <div className="rounded-xl border border-line bg-white p-4">
+            <label className="text-xs font-semibold text-muted">
+              {t("editorBookingUrl")}
+              <input
+                className="field mt-1"
+                type="url"
+                inputMode="url"
+                placeholder="https://"
+                value={content.booking?.url ?? ""}
+                onChange={(event) =>
+                  onChange({
+                    ...content,
+                    booking: event.target.value
+                      ? { ...content.booking, url: event.target.value }
+                      : undefined,
+                  })
+                }
+              />
+            </label>
+            <p className="mt-2 text-xs text-muted">{t("editorBookingUrlHelp")}</p>
+            {content.booking ? (
+              <div className="mt-4">
+                <LocalizedFields
+                  label={t("editorBookingLabel")}
+                  value={content.booking.label ?? { en: "", fr: "" }}
+                  onChange={(label) =>
+                    onChange({
+                      ...content,
+                      booking: content.booking
+                        ? {
+                            ...content.booking,
+                            label: label.en || label.fr ? label : undefined,
+                          }
+                        : undefined,
+                    })
+                  }
+                />
+              </div>
+            ) : null}
           </div>
         </div>
       );
@@ -307,6 +368,10 @@ export function WebsiteEditor(props: WebsiteEditorProps) {
   const [sections, setSections] = useState(props.sections);
   const [menuItems, setMenuItems] = useState(props.menuItems);
   const [sitePublished, setSitePublished] = useState(props.sitePublished);
+  const [merchantName, setMerchantName] = useState(props.merchantName);
+  const [branding, setBranding] = useState(props.branding);
+  const [media, setMedia] = useState(props.media);
+  const [showImporter, setShowImporter] = useState(false);
   const [previewDevice, setPreviewDevice] =
     useState<PreviewDevice>("desktop");
   const [previewLocale, setPreviewLocale] = useState<"en" | "fr">("en");
@@ -338,6 +403,27 @@ export function WebsiteEditor(props: WebsiteEditorProps) {
       setDraftMessage(result.usedAi ? t("editorDraftAi") : t("editorDraftFallback"));
       setStep("draft");
     });
+  }
+
+  function applyImport(result: BusinessImportResult) {
+    setMerchantName(result.suggestedName);
+    setSiteKind(result.siteKind);
+    setAnswers(result.answers);
+    setSections(result.draft.sections);
+    setMenuItems(result.draft.menuItems);
+    setBranding((current) => ({ ...current, ...result.branding }));
+    setMedia((current) => [
+      ...current.filter(
+        (item) =>
+          item.kind !== "image" ||
+          !["google", "google-pending"].includes(item.metadata?.source ?? ""),
+      ),
+      ...result.media,
+    ]);
+    setDraftMessage(
+      `${t("editorImportedFrom")} ${result.sourceLabel}. ${t("editorReviewBeforePublish")}`,
+    );
+    setStep("draft");
   }
 
   function updateSectionContent(key: string, content: SiteSectionContent) {
@@ -410,12 +496,12 @@ export function WebsiteEditor(props: WebsiteEditorProps) {
           <div className="grid gap-4 sm:grid-cols-2">
             <button
               type="button"
-              disabled
-              className="rounded-2xl border border-line p-5 text-left opacity-55"
+              onClick={() => setShowImporter((current) => !current)}
+              className="rounded-2xl border-2 border-stamp bg-white p-5 text-left"
             >
               <span className="font-semibold">{t("editorImport")}</span>
               <span className="mt-2 block text-sm text-muted">
-                {t("editorImportLater")}
+                {t("editorImportHelp")}
               </span>
             </button>
             <button
@@ -429,6 +515,14 @@ export function WebsiteEditor(props: WebsiteEditorProps) {
               </span>
             </button>
           </div>
+          {showImporter ? (
+            <div className="mt-6 border-t border-line pt-6">
+              <BusinessImporter
+                googleReady={props.googleReady}
+                onImported={applyImport}
+              />
+            </div>
+          ) : null}
         </EditorPanel>
       ) : null}
 
@@ -482,18 +576,27 @@ export function WebsiteEditor(props: WebsiteEditorProps) {
           <div className="grid gap-5">
             <div>
               <p className="text-sm font-semibold">{t("kindOfShop")}</p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {SITE_KINDS.map((kind) => (
-                  <button
-                    key={kind.id}
-                    type="button"
-                    onClick={() => setSiteKind(kind.id)}
-                    className={`rounded-full border px-3 py-1 text-sm ${
-                      siteKind === kind.id ? "border-ink bg-ink text-paper" : "border-line"
-                    }`}
-                  >
-                    {t(`editorKind${kind.id}`)}
-                  </button>
+              <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                {(["selfcare", "crave"] as const).map((family) => (
+                  <div key={family}>
+                    <p className="text-xs font-semibold tracking-[0.16em] uppercase text-muted">
+                      {t(`editorFamily${family}`)}
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {SITE_KINDS.filter((kind) => kind.family === family).map((kind) => (
+                        <button
+                          key={kind.id}
+                          type="button"
+                          onClick={() => setSiteKind(kind.id)}
+                          className={`rounded-full border px-3 py-1 text-sm ${
+                            siteKind === kind.id ? "border-ink bg-ink text-paper" : "border-line"
+                          }`}
+                        >
+                          {t(`editorKind${kind.id}`)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
@@ -548,6 +651,8 @@ export function WebsiteEditor(props: WebsiteEditorProps) {
         <form action={saveAction} className="space-y-6">
           <input type="hidden" name="siteTemplate" value={siteTemplate} />
           <input type="hidden" name="siteKind" value={siteKind} />
+          <input type="hidden" name="merchantName" value={merchantName} />
+          <input type="hidden" name="branding" value={JSON.stringify(branding)} />
           <input type="hidden" name="answers" value={JSON.stringify(answers)} />
           <input type="hidden" name="sections" value={JSON.stringify(orderedSections)} />
           <input type="hidden" name="menuItems" value={JSON.stringify(menuItems)} />
@@ -765,15 +870,29 @@ export function WebsiteEditor(props: WebsiteEditorProps) {
                   ))}
                 </div>
               </section>
+
+              <SiteMediaManager
+                blobReady={props.blobReady}
+                aiReady={props.aiReady}
+                media={media}
+                onUploaded={(item) => setMedia((current) => [...current, item])}
+                onDeleted={(key) =>
+                  setMedia((current) =>
+                    current.filter((item) => item.key !== key),
+                  )
+                }
+              />
             </div>
 
             <WebsiteEditorPreview
-              branding={props.branding}
+              branding={branding}
               device={previewDevice}
               locale={previewLocale}
               menuItems={menuItems}
-              merchantName={props.merchantName}
+              media={media}
+              merchantName={merchantName}
               sections={orderedSections}
+              siteKind={siteKind}
               onDeviceChange={setPreviewDevice}
               onLocaleChange={setPreviewLocale}
             />

@@ -8,7 +8,7 @@ import { prisma } from "@/lib/db";
 import { uniqueSlug } from "@/lib/slug";
 import { slugify } from "@/lib/ids";
 import { isCardFont } from "@/lib/card-design";
-import { saveMerchantLogo } from "@/lib/logo";
+import { deleteMerchantImage, saveMerchantLogo } from "@/lib/logo";
 import { getLocale } from "@/lib/i18n-server";
 import { translate } from "@/lib/i18n";
 
@@ -109,7 +109,9 @@ export async function updateProgram(
     redirect("/onboarding");
   }
 
-  let logoUrl = parsed.data.logoUrl || merchant.logoUrl;
+  // Existing logos can only be retained; a new URL must come from this
+  // merchant's validated Blob upload below.
+  let logoUrl = merchant.logoUrl;
   const logo = formData.get("logo");
   if (logo instanceof File && logo.size > 0) {
     try {
@@ -142,6 +144,9 @@ export async function updateProgram(
       },
     }),
   ]);
+  if (logoUrl && logoUrl !== merchant.logoUrl && merchant.logoUrl) {
+    await deleteMerchantImage(merchant.logoUrl).catch(() => undefined);
+  }
   revalidatePath("/program");
   revalidatePath("/dashboard");
   revalidatePath(`/join/${merchant.slug}`);

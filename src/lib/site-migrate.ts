@@ -1,10 +1,12 @@
+import { createDefaultSiteSections } from "@/lib/site-kinds";
 import {
   SITE_DATA_VERSION,
-  createDefaultSiteSections,
   parseSiteMenuItems,
   parseSiteSections,
+  siteMediaSchema,
   siteSectionSchema,
   type SiteMenuItem,
+  type SiteMedia,
   type SiteSection,
   type SiteSectionContent,
 } from "@/lib/site-sections";
@@ -12,6 +14,7 @@ import { assertNever } from "@/lib/types";
 
 export type LegacySiteMerchant = {
   name: string;
+  siteKind?: string;
   neighborhood: string;
   hours: string;
   knownFor: string;
@@ -41,6 +44,17 @@ export type StoredSiteMenuItem = {
   currency: string;
   position: number;
   available: boolean;
+};
+
+export type StoredSiteMedia = {
+  key: string;
+  kind: string;
+  url: string;
+  alt: unknown;
+  position: number;
+  width: number | null;
+  height: number | null;
+  metadata: unknown;
 };
 
 export type AssembledSiteData = {
@@ -94,6 +108,7 @@ export function assembleLegacySiteSections(
 ): SiteSection[] {
   const defaults = createDefaultSiteSections({
     merchantName: merchant.name,
+    siteKind: merchant.siteKind,
     neighborhood: merchant.neighborhood,
     knownFor: merchant.knownFor,
     hours: merchant.hours,
@@ -150,6 +165,45 @@ export function parseStoredSiteMenuItems(
       }))
       .sort((first, second) => first.position - second.position),
   );
+}
+
+export function parseStoredSiteMedia(
+  items: StoredSiteMedia[],
+  options: { includePending?: boolean } = {},
+): SiteMedia[] {
+  return items
+    .flatMap((item) => {
+      const parsed = siteMediaSchema.safeParse(
+        item.kind === "video"
+          ? {
+              kind: "video",
+              key: item.key,
+              url: item.url,
+              title: item.alt,
+              position: item.position,
+            }
+          : {
+              kind: "image",
+              key: item.key,
+              url: item.url,
+              alt: item.alt,
+              position: item.position,
+              width: item.width ?? undefined,
+              height: item.height ?? undefined,
+              metadata: item.metadata ?? undefined,
+            },
+      );
+      if (
+        !parsed.success ||
+        (!options.includePending &&
+          parsed.data.kind === "image" &&
+          parsed.data.metadata?.source === "google-pending")
+      ) {
+        return [];
+      }
+      return [parsed.data];
+    })
+    .sort((first, second) => first.position - second.position);
 }
 
 export function assembleSiteData(input: {

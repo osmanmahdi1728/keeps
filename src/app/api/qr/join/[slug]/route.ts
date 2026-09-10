@@ -7,7 +7,11 @@ export async function GET(
   context: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await context.params;
-  const png = await QRCode.toBuffer(`${appUrl()}/join/${slug}`, { type: "png", margin: 1, width: 480 });
+  const png = await QRCode.toBuffer(`${appUrl()}/s/${slug}#loyalty`, {
+    type: "png",
+    margin: 1,
+    width: 480,
+  });
   return new NextResponse(Uint8Array.from(png), {
     headers: {
       "Content-Type": "image/png",

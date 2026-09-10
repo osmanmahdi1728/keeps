@@ -19,6 +19,10 @@ export const getCurrentMerchant = cache(async () => {
       siteMenuItems: {
         orderBy: [{ position: "asc" }, { createdAt: "asc" }],
       },
+      siteMedia: {
+        orderBy: [{ position: "asc" }, { createdAt: "asc" }],
+      },
+      placeSnapshot: true,
     },
   });
 });

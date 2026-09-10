@@ -25,6 +25,13 @@ Without Apple/Google/Resend credentials the product runs in **demo mode**: cards
 
 Vercel + Neon: set `AUTH_SECRET` and set `APP_URL` to the Vercel URL (`https://keeps-two.vercel.app`). Leave `AUTH_URL` unset there — `trustHost` reads the origin from the request. `DATABASE_URL` comes from the Neon store. Each deploy runs `prisma db push` and seeds Demo Cafe (`owner@keeps.local` / `keeps-demo`).
 
+For the business importer, enable Places API (New) and set a server-restricted
+`GOOGLE_PLACES_API_KEY`. Connect a Vercel Blob store for
+`BLOB_READ_WRITE_TOKEN`; uploaded and imported photos are never written to the
+serverless filesystem. `OPENAI_API_KEY` enables bilingual copy polish and the
+explicit no-real-photo image fallback. Website imports accept only public
+HTTP(S) pages and imported facts always remain editable before publishing.
+
 You hold one Apple Pass Type ID and one Google Wallet issuer for every shop.
 
 - Apple Developer Program, Pass Type ID, signing certificate, WWDR cert (base64 in env), HTTPS `APP_URL`

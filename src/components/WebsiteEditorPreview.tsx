@@ -2,8 +2,10 @@
 
 import { useI18n } from "@/components/I18nProvider";
 import { fontCss } from "@/lib/card-design";
+import { bookingLabel, siteKindFamily } from "@/lib/site-kinds";
 import {
   type SiteMenuItem,
+  type SiteMedia,
   type SiteSection,
   type SiteSectionContent,
 } from "@/lib/site-sections";
@@ -13,10 +15,12 @@ function PreviewSection({
   content,
   locale,
   menuItems,
+  bookingText,
 }: {
   content: SiteSectionContent;
   locale: "en" | "fr";
   menuItems: SiteMenuItem[];
+  bookingText: string;
 }) {
   switch (content.type) {
     case "hero":
@@ -31,6 +35,11 @@ function PreviewSection({
           <p className="mx-auto mt-4 max-w-lg text-sm leading-6 opacity-75">
             {content.body[locale]}
           </p>
+          {content.secondaryAction ? (
+            <span className="mt-5 inline-block rounded-full border border-current/25 px-4 py-1.5 text-xs font-semibold">
+              {content.secondaryAction.label[locale]}
+            </span>
+          ) : null}
         </section>
       );
     case "about":
@@ -86,6 +95,11 @@ function PreviewSection({
         <section className="border-t border-current/15 px-6 py-10">
           <h3 className="text-2xl">{content.title[locale]}</h3>
           <p className="mt-3 text-sm opacity-75">{content.body[locale]}</p>
+          {content.booking ? (
+            <span className="mt-4 inline-block rounded-full border border-current/25 px-4 py-1.5 text-xs font-semibold">
+              {content.booking.label?.[locale]?.trim() || bookingText} ↗
+            </span>
+          ) : null}
           <p className="mt-3 text-xs opacity-65">
             {[content.address?.[locale], content.phone, content.email]
               .filter(Boolean)
@@ -115,8 +129,10 @@ export function WebsiteEditorPreview({
   device,
   locale,
   menuItems,
+  media,
   merchantName,
   sections,
+  siteKind,
   onDeviceChange,
   onLocaleChange,
 }: {
@@ -131,12 +147,15 @@ export function WebsiteEditorPreview({
   device: "desktop" | "mobile";
   locale: "en" | "fr";
   menuItems: SiteMenuItem[];
+  media: SiteMedia[];
   merchantName: string;
   sections: SiteSection[];
+  siteKind: string;
   onDeviceChange: (device: "desktop" | "mobile") => void;
   onLocaleChange: (locale: "en" | "fr") => void;
 }) {
   const { t } = useI18n();
+  const bookingText = bookingLabel(siteKindFamily(siteKind))[locale];
   return (
     <aside className="xl:sticky xl:top-6 xl:self-start">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -208,8 +227,28 @@ export function WebsiteEditorPreview({
               content={section.content}
               locale={locale}
               menuItems={menuItems}
+              bookingText={bookingText}
             />
           ))}
+        {media.some((item) => item.kind === "image") ? (
+          <div className="grid grid-cols-3 gap-1 border-t border-current/15 p-2">
+            {media
+              .filter(
+                (item): item is Extract<SiteMedia, { kind: "image" }> =>
+                  item.kind === "image",
+              )
+              .slice(0, 3)
+              .map((item) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={item.key}
+                  src={item.url}
+                  alt={item.alt[locale]}
+                  className="aspect-square w-full rounded-lg object-cover"
+                />
+              ))}
+          </div>
+        ) : null}
       </div>
     </aside>
   );
