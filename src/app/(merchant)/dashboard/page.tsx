@@ -6,6 +6,7 @@ import { daysAgo } from "@/lib/clock";
 import { isAppleWalletConfigured, isGoogleWalletConfigured, isResendConfigured } from "@/lib/config";
 import { getLocale } from "@/lib/i18n-server";
 import { translate } from "@/lib/i18n";
+import { customerEntryPath } from "@/lib/site";
 
 export default async function DashboardPage() {
   const merchant = await requireMerchant();
@@ -25,7 +26,7 @@ export default async function DashboardPage() {
     }),
   ]);
 
-  const joinUrl = `${appUrl()}/s/${merchant.slug}#loyalty`;
+  const joinUrl = `${appUrl()}${customerEntryPath(merchant.slug, merchant.sitePublished)}`;
   const locale = await getLocale();
   const t = (key: Parameters<typeof translate>[1], values?: Record<string, string | number>) =>
     translate(locale, key, values);

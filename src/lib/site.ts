@@ -21,3 +21,9 @@ export function isSiteKind(value: string): value is SiteKind {
 export function isSiteTemplate(value: string): value is SiteTemplateId {
   return SITE_TEMPLATES.some((item) => item.id === value);
 }
+
+// An unpublished storefront 404s, so printed QR codes fall back to the focused
+// enrollment page that stays available regardless of publish state.
+export function customerEntryPath(slug: string, sitePublished: boolean): string {
+  return sitePublished ? `/s/${slug}#loyalty` : `/join/${slug}`;
+}

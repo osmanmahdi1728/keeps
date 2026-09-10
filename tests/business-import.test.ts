@@ -152,8 +152,14 @@ test("appointment trades get a visit-sized reward, counters get a basket-sized o
 });
 
 test("website analysis blocks private network targets", async () => {
-  await assert.rejects(
-    () => analyzeBusinessWebsite("http://127.0.0.1/secret"),
-    /public address/,
-  );
+  for (const target of [
+    "http://127.0.0.1/secret",
+    "http://[::ffff:169.254.169.254]/latest/meta-data",
+    "http://[::1]/secret",
+  ]) {
+    await assert.rejects(
+      () => analyzeBusinessWebsite(target),
+      /IP-literal|public address/,
+    );
+  }
 });

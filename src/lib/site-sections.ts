@@ -142,7 +142,11 @@ const imageMediaSchema = z.object({
   height: z.number().int().positive().optional(),
   metadata: z
     .object({
-      source: z.enum(["upload", "google", "ai", "website"]).optional(),
+      // "google-pending" media is imported but not yet published; it only becomes
+      // "google" once the merchant saves the draft.
+      source: z
+        .enum(["upload", "google", "google-pending", "ai", "website"])
+        .optional(),
       sourceUrl: z.string().url().optional(),
       attribution: z
         .array(

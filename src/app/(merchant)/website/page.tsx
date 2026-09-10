@@ -1,6 +1,7 @@
 import { WebsiteEditor } from "@/components/WebsiteEditor";
 import { requireMerchant } from "@/lib/guards";
 import { appUrl } from "@/lib/ids";
+import { customerEntryPath } from "@/lib/site";
 import { isSiteAiConfigured } from "@/lib/site-ai";
 import { getLocale } from "@/lib/i18n-server";
 import { translate } from "@/lib/i18n";
@@ -60,7 +61,7 @@ function getEditorAnswers(
 
 export default async function WebsitePage() {
   const merchant = await requireMerchant();
-  const siteUrl = `${appUrl()}/s/${merchant.slug}#loyalty`;
+  const siteUrl = `${appUrl()}${customerEntryPath(merchant.slug, merchant.sitePublished)}`;
   const locale = await getLocale();
   const siteData = assembleSiteData({
     merchant,
