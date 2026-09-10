@@ -3,19 +3,20 @@ import { GoogleAuth } from "google-auth-library";
 import { isGoogleWalletConfigured } from "@/lib/config";
 import { appUrl } from "@/lib/ids";
 import type { WalletPassModel } from "@/lib/wallet/apple";
+import {
+  parseServiceAccount,
+  type GoogleServiceAccount,
+} from "@/lib/wallet/google-credentials";
 import { translate } from "@/lib/i18n";
 
-type ServiceAccount = {
-  client_email: string;
-  private_key: string;
-};
-
-function serviceAccount(): ServiceAccount {
-  const raw = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-  if (!raw) {
-    throw new Error("GOOGLE_SERVICE_ACCOUNT_JSON is missing");
+function serviceAccount(): GoogleServiceAccount {
+  const account = parseServiceAccount(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+  if (!account) {
+    throw new Error(
+      "GOOGLE_SERVICE_ACCOUNT_JSON must be the full service account key file, as raw JSON or base64.",
+    );
   }
-  return JSON.parse(raw) as ServiceAccount;
+  return account;
 }
 
 function classId(programId: string): string {

@@ -24,6 +24,7 @@ import {
   googleLoyaltyObject,
   isNotifyQuotaError,
 } from "@/lib/wallet/google";
+import { parseServiceAccount } from "@/lib/wallet/google-credentials";
 import { passDownloadTokenMatches } from "@/lib/wallet/pass-download-token";
 
 const model: WalletPassModel = {
@@ -96,6 +97,25 @@ test("only the note field notifies, and it uses Apple's %@ escape", () => {
       delete process.env.APPLE_PASS_TYPE_ID;
     }
   }
+});
+
+test("Google service account credentials reject mangled pastes", () => {
+  const key = "-----BEGIN PRIVATE KEY-----\\nabc\\n-----END PRIVATE KEY-----\\n";
+  const valid = `{"client_email":"bot@keeps.iam.gserviceaccount.com","private_key":"${key}"}`;
+
+  const parsed = parseServiceAccount(valid);
+  assert.equal(parsed?.client_email, "bot@keeps.iam.gserviceaccount.com");
+  assert.ok(parsed?.private_key.includes("\n"));
+  assert.equal(
+    parseServiceAccount(Buffer.from(valid).toString("base64"))?.client_email,
+    "bot@keeps.iam.gserviceaccount.com",
+  );
+
+  // The tab-separated table copy that crashed the join page.
+  assert.equal(parseServiceAccount('\ttype\t"service_account"'), null);
+  assert.equal(parseServiceAccount(""), null);
+  assert.equal(parseServiceAccount(undefined), null);
+  assert.equal(parseServiceAccount('{"client_email":"bot@keeps.dev"}'), null);
 });
 
 test("Google notification quota errors fall back instead of throwing", () => {

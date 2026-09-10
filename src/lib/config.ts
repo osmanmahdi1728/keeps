@@ -1,3 +1,5 @@
+import { parseServiceAccount } from "@/lib/wallet/google-credentials";
+
 export function isAppleWalletConfigured(): boolean {
   return Boolean(
     process.env.APPLE_PASS_TYPE_ID &&
@@ -18,7 +20,7 @@ export function isExpectedApplePassType(value: string): boolean {
 export function isGoogleWalletConfigured(): boolean {
   return Boolean(
     process.env.GOOGLE_WALLET_ISSUER_ID &&
-      process.env.GOOGLE_SERVICE_ACCOUNT_JSON,
+      parseServiceAccount(process.env.GOOGLE_SERVICE_ACCOUNT_JSON),
   );
 }
 
@@ -53,11 +55,17 @@ export function appleWalletReadiness(): ServiceReadiness {
 export function googleWalletReadiness(): ServiceReadiness & {
   publishing: "demo" | "live";
 } {
+  const base = readiness(["GOOGLE_WALLET_ISSUER_ID", "GOOGLE_SERVICE_ACCOUNT_JSON"]);
+  // An unparseable key is as unusable as a missing one, so report it the same way.
+  const missing =
+    base.missing.includes("GOOGLE_SERVICE_ACCOUNT_JSON") ||
+    parseServiceAccount(process.env.GOOGLE_SERVICE_ACCOUNT_JSON)
+      ? base.missing
+      : [...base.missing, "GOOGLE_SERVICE_ACCOUNT_JSON"];
+
   return {
-    ...readiness([
-      "GOOGLE_WALLET_ISSUER_ID",
-      "GOOGLE_SERVICE_ACCOUNT_JSON",
-    ]),
+    ready: missing.length === 0,
+    missing,
     publishing:
       process.env.GOOGLE_WALLET_PUBLISHING_STATUS === "live"
         ? "live"
