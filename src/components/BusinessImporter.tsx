@@ -7,13 +7,11 @@ import {
   type BusinessImportResult,
 } from "@/app/actions/business-import";
 import { useI18n } from "@/components/I18nProvider";
-import type { PlaceSearchResult } from "@/lib/google-places";
+import type { PlaceSearchResult } from "@/lib/nominatim";
 
 export function BusinessImporter({
-  googleReady,
   onImported,
 }: {
-  googleReady: boolean;
   onImported: (result: BusinessImportResult) => void;
 }) {
   const { t } = useI18n();
@@ -43,7 +41,7 @@ export function BusinessImporter({
     setError("");
     startTransition(async () => {
       const response = await importBusiness({
-        source: "google",
+        source: "osm",
         placeId,
         instagram,
       });
@@ -74,28 +72,25 @@ export function BusinessImporter({
   return (
     <div className="space-y-6">
       <div className="rounded-2xl border border-line bg-white p-4">
-        <p className="font-semibold">{t("editorImportGoogleTitle")}</p>
-        <p className="mt-1 text-sm text-muted">{t("editorImportGoogleHelp")}</p>
+        <p className="font-semibold">{t("editorImportOsmTitle")}</p>
+        <p className="mt-1 text-sm text-muted">{t("editorImportOsmHelp")}</p>
         <div className="mt-4 flex gap-2">
           <input
             className="field"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder={t("editorImportPlaceholder")}
-            disabled={!googleReady || pending}
+            disabled={pending}
           />
           <button
             type="button"
             className="btn btn-primary"
             onClick={search}
-            disabled={!googleReady || pending || query.trim().length < 3}
+            disabled={pending || query.trim().length < 3}
           >
             {t("editorSearch")}
           </button>
         </div>
-        {!googleReady ? (
-          <p className="mt-2 text-xs text-muted">{t("editorGoogleNotConfigured")}</p>
-        ) : null}
         {results.length > 0 ? (
           <ul className="mt-4 divide-y divide-line rounded-xl border border-line">
             {results.map((place) => (
@@ -158,7 +153,7 @@ export function BusinessImporter({
 
       {pending ? <p className="text-sm text-muted">{t("editorImporting")}</p> : null}
       {error ? <p className="text-sm text-stamp">{error}</p> : null}
-      <p className="text-[11px] text-muted">{t("editorGoogleAttribution")}</p>
+      <p className="text-[11px] text-muted">{t("editorOsmAttribution")}</p>
     </div>
   );
 }

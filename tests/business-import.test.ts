@@ -1,39 +1,55 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { normalizeGooglePlace } from "@/lib/google-places";
 import { suggestImportedBranding } from "@/lib/import-branding";
+import { normalizeNominatimPlace } from "@/lib/nominatim";
 import { draftWebsite } from "@/lib/site-ai";
 import { inferSiteKind, suggestProgram } from "@/lib/site-kinds";
-import { analyzeBusinessWebsite } from "@/lib/website-analysis";
+import {
+  analyzeBusinessWebsite,
+  pinnedLookup,
+} from "@/lib/website-analysis";
 
-test("Google Place responses normalize into cache-safe facts", () => {
-  const place = normalizeGooglePlace({
-    id: "place-1",
-    displayName: { text: "North Star Café", languageCode: "en" },
-    primaryType: "cafe",
-    formattedAddress: "1 Test Street, Montréal, QC",
-    location: { latitude: 45.5, longitude: -73.6 },
-    nationalPhoneNumber: "514-555-0100",
-    websiteUri: "https://example.com/",
-    regularOpeningHours: { weekdayDescriptions: ["Monday: 8:00 AM – 6:00 PM"] },
-    rating: 4.8,
-    userRatingCount: 42,
-    googleMapsUri: "https://maps.google.com/?cid=1",
-    photos: [
-      {
-        name: "places/place-1/photos/photo-1",
-        widthPx: 1200,
-        heightPx: 800,
-        authorAttributions: [
-          { displayName: "Sample photographer", uri: "https://example.com/profile" },
-        ],
-      },
-    ],
+test("Nominatim responses normalize into safe business facts", () => {
+  const place = normalizeNominatimPlace({
+    place_id: 123,
+    osm_type: "node",
+    osm_id: 456,
+    lat: "45.5001",
+    lon: "-73.6002",
+    display_name: "North Star Café, 1 Test Street, Montréal, QC",
+    name: "North Star Café",
+    category: "amenity",
+    type: "cafe",
+    extratags: {
+      phone: "514-555-0100",
+      website: "example.com",
+      opening_hours: "Mo-Su 08:00-18:00",
+    },
   });
 
+  assert.equal(place.id, "N456");
   assert.equal(place.name, "North Star Café");
-  assert.equal(place.ratingCount, 42);
-  assert.equal(place.photos[0].attribution[0].name, "Sample photographer");
+  assert.equal(place.latitude, 45.5001);
+  assert.equal(place.longitude, -73.6002);
+  assert.equal(place.website, "https://example.com/");
+  assert.equal(place.mapsUrl, "https://www.openstreetmap.org/node/456");
+  assert.equal("hours" in place, false);
+  assert.equal("rating" in place, false);
+  assert.equal("photos" in place, false);
+});
+
+test("Nominatim normalization rejects unsafe website schemes", () => {
+  const place = normalizeNominatimPlace({
+    place_id: 123,
+    osm_type: "way",
+    osm_id: 789,
+    lat: "45.5",
+    lon: "-73.6",
+    display_name: "Test Shop, Montréal",
+    extratags: { website: "javascript:alert(1)" },
+  });
+
+  assert.equal(place.website, "");
 });
 
 test("brand suggestions honor valid website theme colors", () => {
@@ -149,6 +165,39 @@ test("appointment trades get a visit-sized reward, counters get a basket-sized o
     stampsRequired: 10,
   });
   assert.deepEqual(suggestProgram("not-a-real-kind"), suggestProgram("cafe"));
+});
+
+test("Nominatim accepts listings with null extra tag maps", () => {
+  const place = normalizeNominatimPlace({
+    place_id: "99",
+    osm_type: "Node",
+    osm_id: "12",
+    lat: "45.5",
+    lon: "-73.6",
+    display_name: "Corner Shop, Montréal",
+    extratags: null,
+    namedetails: null,
+  });
+  assert.equal(place.id, "N12");
+  assert.equal(place.website, "");
+});
+
+test("Node 22 DNS pinning returns an address list when lookup asks for all", () => {
+  const lookup = pinnedLookup("203.0.113.10", 4);
+  let allResult: unknown;
+  lookup("example.com", { all: true }, (_err, addresses) => {
+    allResult = addresses;
+  });
+  assert.deepEqual(allResult, [{ address: "203.0.113.10", family: 4 }]);
+
+  let singleAddress = "";
+  let singleFamily = 0;
+  lookup("example.com", {}, (_err, address, family) => {
+    singleAddress = String(address);
+    singleFamily = Number(family);
+  });
+  assert.equal(singleAddress, "203.0.113.10");
+  assert.equal(singleFamily, 4);
 });
 
 test("website analysis blocks private network targets", async () => {

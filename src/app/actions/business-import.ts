@@ -6,12 +6,11 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireMerchant } from "@/lib/guards";
 import {
-  downloadGooglePhoto,
-  getGooglePlace,
-  searchGooglePlaces,
+  getNominatimPlace,
+  searchNominatim,
   type NormalizedPlace,
   type PlaceSearchResult,
-} from "@/lib/google-places";
+} from "@/lib/nominatim";
 import {
   importedBrandingSchema,
   suggestImportedBranding,
@@ -36,13 +35,20 @@ import { analyzeBusinessWebsite, type WebsiteAnalysis } from "@/lib/website-anal
 const placeSearchSchema = z.string().trim().min(3).max(160);
 const importRequestSchema = z.discriminatedUnion("source", [
   z.object({
-    source: z.literal("google"),
-    placeId: z.string().trim().min(3).max(300),
+    source: z.literal("osm"),
+    placeId: z.string().trim().regex(/^[NWR]\d+$/),
     instagram: z.string().trim().max(300).optional(),
   }),
   z.object({
     source: z.literal("website"),
-    websiteUrl: z.string().trim().url().max(500),
+    websiteUrl: z
+      .string()
+      .trim()
+      .max(500)
+      .transform((value) =>
+        /^[a-z][a-z\d+.-]*:/i.test(value) ? value : `https://${value}`,
+      )
+      .pipe(z.string().url().max(500)),
     instagram: z.string().trim().max(300).optional(),
   }),
 ]);
@@ -101,7 +107,7 @@ function localized(value: string): { en: string; fr: string } {
 function placeAnswers(place: NormalizedPlace): SiteDraftAnswers {
   return {
     neighborhood: localized(place.address),
-    hours: localized(place.hours.join("\n")),
+    hours: localized(""),
     knownFor: localized(
       place.primaryType
         ? `${place.name} is a local ${place.primaryType.replaceAll("_", " ")}.`
@@ -116,93 +122,6 @@ function websiteAnswers(analysis: WebsiteAnalysis): SiteDraftAnswers {
     hours: localized(""),
     knownFor: localized(analysis.description || analysis.text.slice(0, 500)),
   };
-}
-
-async function saveGoogleMedia(
-  merchantId: string,
-  place: NormalizedPlace,
-  maximum: number,
-): Promise<SiteMedia[]> {
-  if (!process.env.BLOB_READ_WRITE_TOKEN || maximum === 0) {
-    return [];
-  }
-  const media: SiteMedia[] = [];
-  for (const [index, photo] of place.photos.slice(0, Math.min(4, maximum)).entries()) {
-    try {
-      const image = await downloadGooglePhoto(photo.name);
-      const url = await saveMerchantImageBytes(
-        merchantId,
-        image.bytes,
-        image.contentType,
-        "gallery",
-      );
-      media.push(
-        siteMediaSchema.parse({
-          kind: "image",
-          key: `google-pending-${index + 1}`,
-          url,
-          alt: localized(`${place.name} photo ${index + 1}`),
-          position: index * 10,
-          width: photo.width ?? undefined,
-          height: photo.height ?? undefined,
-          metadata: {
-            source: "google-pending",
-            sourceUrl: place.mapsUrl || undefined,
-            attribution: photo.attribution.map((item) => ({
-              name: item.name,
-              uri: item.uri || undefined,
-            })),
-          },
-        }),
-      );
-    } catch {
-      // A missing photo should not block importing the business facts.
-    }
-  }
-  return media;
-}
-
-async function persistImportedMedia(merchantId: string, media: SiteMedia[]): Promise<void> {
-  if (media.length === 0) {
-    return;
-  }
-  const previous = await prisma.siteMedia.findMany({
-    where: {
-      merchantId,
-      metadata: { path: ["source"], equals: "google-pending" },
-    },
-    select: { url: true },
-  });
-  const images = media.filter(
-    (item): item is Extract<SiteMedia, { kind: "image" }> =>
-      item.kind === "image",
-  );
-  await prisma.$transaction([
-    prisma.siteMedia.deleteMany({
-      where: {
-        merchantId,
-        metadata: { path: ["source"], equals: "google-pending" },
-      },
-    }),
-    prisma.siteMedia.createMany({
-      data: images.map((item) => ({
-        merchantId,
-        key: item.key,
-        kind: item.kind,
-        url: item.url,
-        alt: item.alt,
-        position: item.position,
-        width: item.width ?? null,
-        height: item.height ?? null,
-        metadata: item.metadata
-          ? (item.metadata as Prisma.InputJsonValue)
-          : Prisma.JsonNull,
-      })),
-    }),
-  ]);
-  await Promise.all(
-    previous.map((item) => deleteMerchantImage(item.url).catch(() => undefined)),
-  );
 }
 
 export async function searchBusinesses(
@@ -225,7 +144,7 @@ export async function searchBusinesses(
   }
   lastSearchByMerchant.set(merchant.id, Date.now());
   try {
-    const results = await searchGooglePlaces(parsed.data, locale);
+    const results = await searchNominatim(parsed.data, locale);
     if (placeSearchCache.size >= 100) {
       const oldestKey = placeSearchCache.keys().next().value;
       if (oldestKey) {
@@ -233,7 +152,7 @@ export async function searchBusinesses(
       }
     }
     placeSearchCache.set(cacheKey, {
-      expiresAt: Date.now() + 5 * 60_000,
+      expiresAt: Date.now() + 30 * 60_000,
       results,
     });
     return { results };
@@ -257,8 +176,8 @@ export async function importBusiness(
   const instagram = normalizeInstagram(parsed.data.instagram);
 
   try {
-    if (parsed.data.source === "google") {
-      const place = await getGooglePlace(parsed.data.placeId);
+    if (parsed.data.source === "osm") {
+      const place = await getNominatimPlace(parsed.data.placeId, locale);
       let website: WebsiteAnalysis | null = null;
       if (place.website) {
         website = await analyzeBusinessWebsite(place.website).catch(() => null);
@@ -281,31 +200,11 @@ export async function importBusiness(
           phone: place.phone,
           website: place.website,
           mapsUrl: place.mapsUrl,
-          rating: place.rating,
-          ratingCount: place.ratingCount,
           rawWebsiteText: website?.text ?? "",
         },
       });
-      const existingMedia = await prisma.siteMedia.findMany({
-        where: { merchantId: merchant.id },
-        select: { metadata: true },
-      });
-      const nonGoogleMediaCount = existingMedia.filter((item) => {
-        const metadata =
-          item.metadata &&
-          typeof item.metadata === "object" &&
-          !Array.isArray(item.metadata)
-            ? item.metadata
-            : null;
-        return metadata?.source !== "google";
-      }).length;
-      const media = await saveGoogleMedia(
-        merchant.id,
-        place,
-        Math.max(0, 12 - nonGoogleMediaCount),
-      );
       await prisma.$transaction([
-        prisma.googlePlaceSnapshot.upsert({
+        prisma.osmPlaceSnapshot.upsert({
           where: { merchantId: merchant.id },
           create: {
             merchantId: merchant.id,
@@ -321,14 +220,11 @@ export async function importBusiness(
         prisma.merchant.update({
           where: { id: merchant.id },
           data: {
-            googlePlaceId: place.id,
+            osmPlaceId: place.id,
             placeSyncedAt: new Date(),
           },
         }),
       ]);
-      if (process.env.BLOB_READ_WRITE_TOKEN) {
-        await persistImportedMedia(merchant.id, media);
-      }
       revalidatePath("/website");
       return {
         suggestedName: place.name,
@@ -336,15 +232,13 @@ export async function importBusiness(
         answers,
         draft,
         branding: suggestImportedBranding(siteKind, website?.themeColor),
-        media,
+        media: [],
         facts: [
           place.address,
           place.phone,
-          place.hours.join(" · "),
-          place.rating ? `${place.rating}/5 (${place.ratingCount})` : "",
           place.website,
         ].filter(Boolean),
-        sourceLabel: "Google Places",
+        sourceLabel: "OpenStreetMap",
         programSuggestion,
       };
     }

@@ -27,7 +27,7 @@ type SiteKindProfile = {
   id: SiteKindId;
   family: SiteKindFamily;
   /**
-   * Matched as substrings against a Google Places `primaryType` or scraped page text.
+   * Matched as substrings against an imported listing type or scraped page text.
    * The longest matching hint wins, so `nail_salon` resolves to nails rather than salon.
    */
   typeHints: string[];

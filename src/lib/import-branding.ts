@@ -20,8 +20,8 @@ export type ImportedBranding = z.infer<typeof importedBrandingSchema>;
 
 type PalettePreset = ImportedBranding & { kinds: string[] };
 
-// Matched as substrings, so entries cover both our own site kinds and the raw
-// Google Places types an import may hand over. Most specific groups come first.
+// Matched as substrings, so entries cover both our site kinds and raw listing
+// categories an importer may hand over. Most specific groups come first.
 const PRESETS: PalettePreset[] = [
   {
     kinds: ["nails", "nail", "lashbrow", "lash", "brow", "wax", "esthetic"],

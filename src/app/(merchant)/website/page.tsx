@@ -99,7 +99,6 @@ export default async function WebsitePage() {
           siteKind={merchant.siteKind}
           sitePublished={merchant.sitePublished}
           aiReady={isSiteAiConfigured()}
-          googleReady={Boolean(process.env.GOOGLE_PLACES_API_KEY)}
           blobReady={Boolean(process.env.BLOB_READ_WRITE_TOKEN)}
           answers={answers}
           sections={siteData.sections}

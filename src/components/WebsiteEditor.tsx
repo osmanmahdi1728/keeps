@@ -32,7 +32,6 @@ type WebsiteEditorProps = {
   siteKind: string;
   sitePublished: boolean;
   aiReady: boolean;
-  googleReady: boolean;
   blobReady: boolean;
   answers: {
     neighborhood: LocalizedText;
@@ -412,14 +411,7 @@ export function WebsiteEditor(props: WebsiteEditorProps) {
     setSections(result.draft.sections);
     setMenuItems(result.draft.menuItems);
     setBranding((current) => ({ ...current, ...result.branding }));
-    setMedia((current) => [
-      ...current.filter(
-        (item) =>
-          item.kind !== "image" ||
-          !["google", "google-pending"].includes(item.metadata?.source ?? ""),
-      ),
-      ...result.media,
-    ]);
+    setMedia((current) => [...current, ...result.media]);
     setDraftMessage(
       `${t("editorImportedFrom")} ${result.sourceLabel}. ${t("editorReviewBeforePublish")}`,
     );
@@ -517,10 +509,7 @@ export function WebsiteEditor(props: WebsiteEditorProps) {
           </div>
           {showImporter ? (
             <div className="mt-6 border-t border-line pt-6">
-              <BusinessImporter
-                googleReady={props.googleReady}
-                onImported={applyImport}
-              />
+              <BusinessImporter onImported={applyImport} />
             </div>
           ) : null}
         </EditorPanel>

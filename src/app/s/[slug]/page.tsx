@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { JoinForm } from "@/components/JoinForm";
 import { PassCard } from "@/components/PassCard";
 import { fontCss } from "@/lib/card-design";
-import { normalizedPlaceSchema } from "@/lib/google-places";
 import { appUrl } from "@/lib/ids";
 import { getLocale } from "@/lib/i18n-server";
 import { translate } from "@/lib/i18n";
@@ -81,10 +80,8 @@ function safeExternalUrl(
     if (
       kind === "maps" &&
       ![
-        "google.com",
-        "www.google.com",
-        "maps.google.com",
-        "maps.app.goo.gl",
+        "openstreetmap.org",
+        "www.openstreetmap.org",
       ].includes(hostname)
     ) {
       return null;
@@ -171,11 +168,6 @@ function ImageGallery({ media, locale }: { media: SiteMedia[]; locale: SiteLocal
           </figure>
         ))}
       </div>
-      {images.some((image) => image.metadata?.source === "google") ? (
-        <p className="mt-3 text-right text-[11px] opacity-60">
-          {locale === "fr" ? "Photos fournies par Google" : "Photos provided by Google"}
-        </p>
-      ) : null}
     </section>
   );
 }
@@ -260,7 +252,7 @@ function ContentSection({
               {content.email ? <a className="block underline" href={`mailto:${content.email}`}>{content.email}</a> : null}
               {website ? <a className="block underline" href={website} rel="noreferrer" target="_blank">Website ↗</a> : null}
               {instagram ? <a className="block underline" href={instagram} rel="noreferrer" target="_blank">Instagram ↗</a> : null}
-              {maps ? <a className="block underline" href={maps} rel="noreferrer" target="_blank">{locale === "fr" ? "Voir sur Google Maps ↗" : "View on Google Maps ↗"}</a> : null}
+              {maps ? <a className="block underline" href={maps} rel="noreferrer" target="_blank">{locale === "fr" ? "Voir sur OpenStreetMap ↗" : "View on OpenStreetMap ↗"}</a> : null}
             </div>
           </div>
         </section>
@@ -293,13 +285,6 @@ export default async function ShopSitePage({ params }: ShopPageProps) {
   );
   const contact = siteData.sections.find(
     (section) => section.enabled && section.content.type === "contact",
-  );
-  const snapshotIsLive =
-    merchant.placeSyncedAt &&
-    merchant.placeSnapshot &&
-    merchant.placeSyncedAt >= merchant.placeSnapshot.syncedAt;
-  const place = normalizedPlaceSchema.safeParse(
-    snapshotIsLive ? merchant.placeSnapshot?.payload : undefined,
   );
   const heroContent = hero?.content.type === "hero" ? hero.content : null;
   const loyaltyContent =
@@ -403,13 +388,6 @@ export default async function ShopSitePage({ params }: ShopPageProps) {
             />
           </div>
         </section>
-
-        {place.success && place.data.rating ? (
-          <section className="flex flex-wrap items-center justify-between gap-3 border-y border-current/10 py-5 text-sm">
-            <p><strong className="text-xl">{place.data.rating.toFixed(1)} ★</strong> <span className="opacity-65">Google · {place.data.ratingCount} {locale === "fr" ? "avis" : "reviews"}</span></p>
-            {place.data.mapsUrl ? <a className="underline" href={place.data.mapsUrl} target="_blank" rel="noreferrer">{locale === "fr" ? "Voir la fiche Google ↗" : "View Google listing ↗"}</a> : null}
-          </section>
-        ) : null}
 
         {siteData.sections
           .filter((section) => section.enabled)

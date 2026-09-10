@@ -85,7 +85,7 @@ export function SiteMediaManager({
                 />
                 {item.metadata?.source === "google" ? (
                   <figcaption className="mt-1 text-[10px] text-muted">
-                    Google
+                    {t("editorImportedPhoto")}
                     {item.metadata.attribution?.map((attribution) => (
                       <span key={`${item.key}-${attribution.name}`}>
                         {" · "}

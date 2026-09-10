@@ -63,6 +63,42 @@ type ResolvedPublicUrl = {
   family: 4 | 6;
 };
 
+type LookupCallback = (
+  err: NodeJS.ErrnoException | null,
+  address?: string | Array<{ address: string; family: number }>,
+  family?: number,
+) => void;
+
+// Node 22's http/https client always calls custom lookup with `{ all: true }`.
+// The older `(err, address, family)` callback leaves `address` undefined.
+export function pinnedLookup(address: string, family: 4 | 6) {
+  return (
+    _hostname: string,
+    options: unknown,
+    callback?: LookupCallback,
+  ): void => {
+    const cb: LookupCallback | undefined =
+      typeof options === "function" ? options : callback;
+    if (!cb) {
+      throw new Error("DNS lookup callback missing.");
+    }
+    if (
+      options &&
+      typeof options === "object" &&
+      "all" in options &&
+      (options as { all?: boolean }).all
+    ) {
+      cb(null, [{ address, family }]);
+      return;
+    }
+    cb(null, address, family);
+  };
+}
+
+function stripMarkup(value: string): string {
+  return value.replace(/<\/?[a-z][^>]*>/gi, " ").replace(/\s+/g, " ").trim();
+}
+
 async function assertPublicUrl(rawUrl: string): Promise<ResolvedPublicUrl> {
   const url = new URL(rawUrl);
   if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) {
@@ -108,13 +144,13 @@ async function fetchPublicHtml(rawUrl: string): Promise<{ html: string; url: URL
     const response = await new Promise<IncomingMessage>((resolve, reject) => {
       const request = transport.get(resolved.url, {
         headers: {
-          Accept: "text/html,application/xhtml+xml",
-          "User-Agent": "KeepsBusinessImporter/1.0",
+          Accept: "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
+          "Accept-Language": "en-CA,fr-CA;q=0.8,en;q=0.7",
+          "User-Agent":
+            "Mozilla/5.0 (compatible; KeepsLoyalty/1.0; +https://keeps-two.vercel.app)",
         },
         timeout: 12_000,
-        lookup: (_hostname, _options, callback) => {
-          callback(null, resolved.address, resolved.family);
-        },
+        lookup: pinnedLookup(resolved.address, resolved.family),
       }, resolve);
       request.on("timeout", () => request.destroy(new Error("Website request timed out.")));
       request.on("error", reject);
@@ -133,7 +169,11 @@ async function fetchPublicHtml(rawUrl: string): Promise<{ html: string; url: URL
       continue;
     }
     const contentType = response.headers["content-type"]?.toLowerCase() ?? "";
-    if (status < 200 || status >= 300 || !contentType.includes("text/html")) {
+    const looksLikeHtml =
+      contentType === "" ||
+      contentType.includes("text/html") ||
+      contentType.includes("application/xhtml");
+    if (status < 200 || status >= 300 || !looksLikeHtml) {
       response.resume();
       throw new Error("That URL did not return a public web page.");
     }
@@ -181,20 +221,16 @@ function absoluteWebUrl(value: string, baseUrl: URL): string | null {
 export async function analyzeBusinessWebsite(rawUrl: string): Promise<WebsiteAnalysis> {
   const normalizedInput = z.string().trim().url().max(500).parse(rawUrl);
   const { html, url } = await fetchPublicHtml(normalizedInput);
-  const title = decodeEntities(
-    metaContent(html, "og:title") ||
-      html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] ||
-      "",
-  )
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 160);
-  const description = (
-    metaContent(html, "og:description") || metaContent(html, "description")
-  )
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 500);
+  const title = stripMarkup(
+    decodeEntities(
+      metaContent(html, "og:title") ||
+        html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] ||
+        "",
+    ),
+  ).slice(0, 160);
+  const description = stripMarkup(
+    metaContent(html, "og:description") || metaContent(html, "description"),
+  ).slice(0, 500);
   const themeColor = metaContent(html, "theme-color").match(/^#[0-9a-f]{6}$/i)?.[0] ?? "";
 
   const imageCandidates = [
@@ -209,16 +245,15 @@ export async function analyzeBusinessWebsite(rawUrl: string): Promise<WebsiteAna
     ),
   ].slice(0, 8);
 
-  const text = decodeEntities(
-    html
-      .replace(/<script\b[\s\S]*?<\/script>/gi, " ")
-      .replace(/<style\b[\s\S]*?<\/style>/gi, " ")
-      .replace(/<svg\b[\s\S]*?<\/svg>/gi, " ")
-      .replace(/<[^>]+>/g, " "),
-  )
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 8_000);
+  const text = stripMarkup(
+    decodeEntities(
+      html
+        .replace(/<script\b[\s\S]*?<\/script>/gi, " ")
+        .replace(/<style\b[\s\S]*?<\/style>/gi, " ")
+        .replace(/<svg\b[\s\S]*?<\/svg>/gi, " ")
+        .replace(/<[^>]+>/g, " "),
+    ),
+  ).slice(0, 8_000);
 
   return {
     url: url.toString(),

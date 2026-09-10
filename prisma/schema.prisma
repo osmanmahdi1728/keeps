@@ -88,7 +88,7 @@ model Merchant {
   about           String   @default("")
   sitePublished   Boolean  @default(true)
   siteVersion     Int      @default(1)
-  googlePlaceId   String?
+  osmPlaceId      String?  @map("googlePlaceId")
   placeSyncedAt   DateTime?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -96,9 +96,9 @@ model Merchant {
   siteSections    SiteSection[]
   siteMedia       SiteMedia[]
   siteMenuItems   SiteMenuItem[]
-  placeSnapshot   GooglePlaceSnapshot?
+  placeSnapshot   OsmPlaceSnapshot?
 
-  @@index([googlePlaceId])
+  @@index([osmPlaceId])
 }
 
 model SiteSection {
@@ -168,7 +168,7 @@ model SiteMenuItem {
   @@index([mediaId])
 }
 
-model GooglePlaceSnapshot {
+model OsmPlaceSnapshot {
   id         String   @id @default(cuid())
   merchantId String   @unique
   merchant   Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
@@ -179,6 +179,7 @@ model GooglePlaceSnapshot {
   updatedAt  DateTime @updatedAt
 
   @@index([placeId])
+  @@map("GooglePlaceSnapshot")
 }
 
 model Program {
