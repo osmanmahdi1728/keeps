@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { WalletCardPreview } from "@/components/WalletCardPreview";
 import { getLocale } from "@/lib/i18n-server";
 import { translate } from "@/lib/i18n";
 
@@ -38,18 +39,24 @@ export default async function HomePage() {
               </Link>
             </div>
           </div>
-          <div className="rounded-[32px] bg-forest p-8 text-[#f3eadc] shadow-[0_30px_80px_rgba(28,25,20,0.25)]">
-            <p className="text-xs tracking-[0.2em] uppercase opacity-70">{t("walletPreview")}</p>
-            <p className="font-serif mt-6 text-4xl">Northside Coffee</p>
-            <p className="mt-2 text-sm opacity-80">{t("previewReward")}</p>
-            <div className="mt-8 grid grid-cols-5 gap-2">
-              {Array.from({ length: 10 }, (_, i) => (
-                <span
-                  key={`home-stamp-${i}`}
-                  className="flex h-9 items-center justify-center rounded-full border border-[#f3eadc]/40 text-xs"
-                  style={{ background: i < 4 ? "#c45c26" : "transparent" }}
-                />
-              ))}
+          <div>
+            <WalletCardPreview
+              platform="apple"
+              merchantName="Northside Coffee"
+              rewardLabel={t("previewReward")}
+              stampsRequired={10}
+              stampCount={4}
+              backgroundColor="#214d3a"
+              primaryColor="#f3eadc"
+              accentColor="#c45c26"
+            />
+            <div className="mt-5 flex items-center justify-center gap-2 text-xs font-semibold text-muted">
+              <span className="rounded-full border border-line bg-card px-3 py-1.5">
+                Apple Wallet
+              </span>
+              <span className="rounded-full border border-line bg-card px-3 py-1.5">
+                Google Wallet
+              </span>
             </div>
           </div>
         </section>
