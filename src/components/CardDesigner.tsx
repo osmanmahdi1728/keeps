@@ -1,12 +1,16 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { updateProgram } from "@/app/actions/program";
 import {
   WalletCardPreview,
   type WalletPreviewPlatform,
 } from "@/components/WalletCardPreview";
-import { CARD_TEMPLATES } from "@/lib/card-design";
+import {
+  accessibleTextColor,
+  CARD_TEMPLATES,
+  contrastRatio,
+} from "@/lib/card-design";
 import { paletteFromImage } from "@/lib/palette-from-image";
 import { useI18n } from "@/components/I18nProvider";
 
@@ -45,6 +49,25 @@ export function CardDesigner(props: CardDesignerProps) {
   const [fontFamily, setFontFamily] = useState(props.fontFamily);
   const [templateId, setTemplateId] = useState(props.templateId);
   const [paletteNote, setPaletteNote] = useState<string | null>(null);
+  const [styleFilter, setStyleFilter] = useState<
+    "minimal" | "classic" | "bold"
+  >("minimal");
+  const [previewStampCount, setPreviewStampCount] = useState(
+    Math.min(3, props.stampsRequired),
+  );
+  const [previewMessage, setPreviewMessage] = useState("");
+  const [removeLogo, setRemoveLogo] = useState(false);
+  const logoInput = useRef<HTMLInputElement>(null);
+  const previewCount = Math.min(previewStampCount, stampsRequired);
+  const ratio = contrastRatio(primaryColor, backgroundColor);
+  const contrastIsReadable = ratio >= 4.5;
+
+  useEffect(() => {
+    if (!logoUrl.startsWith("blob:")) {
+      return;
+    }
+    return () => URL.revokeObjectURL(logoUrl);
+  }, [logoUrl]);
 
   const [state, action, pending] = useActionState(
     async (_prev: { error?: string; saved?: boolean } | undefined, formData: FormData) =>
@@ -71,6 +94,7 @@ export function CardDesigner(props: CardDesignerProps) {
     }
     const preview = URL.createObjectURL(file);
     setLogoUrl(preview);
+    setRemoveLogo(false);
     try {
       const palette = await paletteFromImage(file);
       setPrimaryColor(palette.primaryColor);
@@ -84,6 +108,23 @@ export function CardDesigner(props: CardDesignerProps) {
     }
   }
 
+  function clearLogo() {
+    setLogoUrl("");
+    setRemoveLogo(true);
+    setPaletteNote(null);
+    if (logoInput.current) {
+      logoInput.current.value = "";
+    }
+  }
+
+  function updateColor(
+    setter: (value: string) => void,
+    value: string,
+  ) {
+    setter(value);
+    setTemplateId("custom");
+  }
+
   return (
     <div className="grid gap-10 lg:grid-cols-[1fr_20rem]">
       <form action={action} className="space-y-8">
@@ -94,6 +135,7 @@ export function CardDesigner(props: CardDesignerProps) {
         <input type="hidden" name="fontFamily" value={fontFamily} />
         <input type="hidden" name="templateId" value={templateId} />
         <input type="hidden" name="logoUrl" value={logoUrl.startsWith("blob:") ? props.logoUrl : logoUrl} />
+        <input type="hidden" name="removeLogo" value={removeLogo ? "yes" : "no"} />
 
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-stamp">
@@ -179,49 +221,176 @@ export function CardDesigner(props: CardDesignerProps) {
         <section className={step === 1 ? "block" : "hidden"}>
           <h2 className="font-serif text-2xl">{t("templates")}</h2>
           <p className="mt-1 text-sm text-muted">{t("templatesHelp")}</p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {(["minimal", "classic", "bold"] as const).map((style) => (
+              <button
+                key={style}
+                type="button"
+                aria-pressed={styleFilter === style}
+                className={`rounded-full border px-4 py-2 text-sm font-semibold ${
+                  styleFilter === style
+                    ? "border-ink bg-ink text-paper"
+                    : "border-line bg-card text-muted"
+                }`}
+                onClick={() => setStyleFilter(style)}
+              >
+                {t(
+                  style === "minimal"
+                    ? "styleMinimal"
+                    : style === "classic"
+                      ? "styleClassic"
+                      : "styleBold",
+                )}
+              </button>
+            ))}
+          </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {CARD_TEMPLATES.map((template) => (
+            {CARD_TEMPLATES.filter(
+              (template) => template.style === styleFilter,
+            ).map((template) => (
               <button
                 key={template.id}
                 type="button"
+                aria-pressed={templateId === template.id}
                 onClick={() => applyTemplate(template.id)}
                 className="rounded-2xl border px-4 py-3 text-left"
                 style={{
                   borderColor: templateId === template.id ? template.accentColor : "var(--line)",
-                  background: `linear-gradient(135deg, ${template.backgroundColor}, ${template.gradientEnd})`,
+                  backgroundColor: template.backgroundColor,
                   color: template.primaryColor,
                 }}
               >
                 <span className="block font-semibold">{template.name}</span>
                 <span className="mt-1 block text-xs opacity-70">{template.vibe}</span>
+                <span className="mt-3 flex gap-1.5">
+                  {[
+                    template.backgroundColor,
+                    template.primaryColor,
+                    template.accentColor,
+                  ].map((color) => (
+                    <span
+                      key={color}
+                      className="h-4 w-4 rounded-full border border-current/15"
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </span>
               </button>
             ))}
           </div>
+          <p className="mt-4 rounded-xl border border-line bg-card p-3 text-xs leading-5 text-muted">
+            {t("walletTypographyNote")}
+          </p>
         </section>
 
         <section className={step === 2 ? "block" : "hidden"}>
           <h2 className="font-serif text-2xl">{t("logo")}</h2>
           <p className="mt-1 text-sm text-muted">{t("logoHelp")}</p>
-          <label className="mt-4 block text-sm font-semibold">
-            {t("uploadLogo")}
+          <label
+            htmlFor="card-logo"
+            className="mt-4 flex cursor-pointer items-center gap-4 rounded-2xl border border-dashed border-line bg-card p-4 transition hover:border-ink"
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={(event) => {
+              event.preventDefault();
+              void onLogo(event.dataTransfer.files[0]);
+            }}
+          >
+            {logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={logoUrl}
+                alt=""
+                className="h-16 w-16 rounded-2xl bg-white object-contain p-1"
+              />
+            ) : (
+              <span
+                className="flex h-16 w-16 items-center justify-center rounded-2xl text-2xl font-bold"
+                style={{
+                  backgroundColor: accentColor,
+                  color: accessibleTextColor(accentColor),
+                }}
+              >
+                {name.trim().charAt(0).toUpperCase() || "K"}
+              </span>
+            )}
+            <span>
+              <span className="block text-sm font-semibold">
+                {logoUrl ? t("replaceLogo") : t("uploadLogo")}
+              </span>
+              <span className="mt-1 block text-xs text-muted">
+                {t("logoDropHelp")}
+              </span>
+            </span>
             <input
-              className="field mt-1"
+              ref={logoInput}
+              id="card-logo"
+              className="sr-only"
               type="file"
               name="logo"
               accept="image/png,image/jpeg,image/webp"
               onChange={(event) => void onLogo(event.target.files?.[0])}
             />
           </label>
+          {logoUrl ? (
+            <button
+              className="mt-3 text-sm font-semibold text-muted underline-offset-4 hover:underline"
+              type="button"
+              onClick={clearLogo}
+            >
+              {t("removeLogo")}
+            </button>
+          ) : null}
           {paletteNote ? <p className="mt-2 text-sm text-muted">{paletteNote}</p> : null}
         </section>
 
         <section className={step === 2 ? "block" : "hidden"}>
           <h2 className="font-serif text-2xl">{t("colorGrade")}</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <ColorField label={t("ink")} value={primaryColor} onChange={setPrimaryColor} />
-            <ColorField label={t("cardStart")} value={backgroundColor} onChange={setBackgroundColor} />
-            <ColorField label={t("cardFade")} value={gradientEnd} onChange={setGradientEnd} />
-            <ColorField label={t("stamp")} value={accentColor} onChange={setAccentColor} />
+            <ColorField
+              label={t("ink")}
+              value={primaryColor}
+              onChange={(value) => updateColor(setPrimaryColor, value)}
+            />
+            <ColorField
+              label={t("cardStart")}
+              value={backgroundColor}
+              onChange={(value) => updateColor(setBackgroundColor, value)}
+            />
+            <ColorField
+              label={t("accent")}
+              value={accentColor}
+              onChange={(value) => updateColor(setAccentColor, value)}
+            />
+          </div>
+          <div
+            className={`mt-4 rounded-xl border p-4 ${
+              contrastIsReadable
+                ? "border-forest/20 bg-forest/5"
+                : "border-stamp/30 bg-stamp/5"
+            }`}
+          >
+            <p className="text-sm font-semibold">
+              {contrastIsReadable
+                ? t("contrastGood")
+                : t("contrastNeedsWork")}
+            </p>
+            <p className="mt-1 text-xs text-muted">
+              {t("contrastRatio", { ratio: ratio.toFixed(1) })}
+            </p>
+            {!contrastIsReadable ? (
+              <button
+                className="btn btn-ghost mt-3"
+                type="button"
+                onClick={() =>
+                  updateColor(
+                    setPrimaryColor,
+                    accessibleTextColor(backgroundColor),
+                  )
+                }
+              >
+                {t("fixContrast")}
+              </button>
+            ) : null}
           </div>
         </section>
 
@@ -285,6 +454,7 @@ export function CardDesigner(props: CardDesignerProps) {
               <button
                 key={platform}
                 type="button"
+                aria-pressed={previewPlatform === platform}
                 className="rounded-full px-3 py-1.5 capitalize"
                 style={{
                   backgroundColor:
@@ -304,12 +474,43 @@ export function CardDesigner(props: CardDesignerProps) {
           merchantName={name || t("yourShop")}
           rewardLabel={rewardLabel || t("reward")}
           stampsRequired={stampsRequired || 10}
-          stampCount={3}
+          stampCount={previewCount}
           logoUrl={logoUrl || null}
           backgroundColor={backgroundColor}
           primaryColor={primaryColor}
           accentColor={accentColor}
+          lastMessage={previewMessage || null}
         />
+        <div className="mt-5 space-y-4 rounded-2xl border border-line bg-card p-4">
+          <label className="block text-xs font-semibold">
+            <span className="flex items-center justify-between gap-3">
+              <span>{t("previewStamps")}</span>
+              <span className="font-mono text-muted">
+                {previewCount}/{stampsRequired}
+              </span>
+            </span>
+            <input
+              className="mt-3 w-full accent-stamp"
+              type="range"
+              min={0}
+              max={Math.max(stampsRequired, 1)}
+              value={previewCount}
+              onChange={(event) =>
+                setPreviewStampCount(Number(event.target.value))
+              }
+            />
+          </label>
+          <label className="block text-xs font-semibold">
+            {t("previewMessage")}
+            <input
+              className="field mt-2"
+              value={previewMessage}
+              maxLength={90}
+              placeholder={t("previewMessagePlaceholder")}
+              onChange={(event) => setPreviewMessage(event.target.value)}
+            />
+          </label>
+        </div>
       </aside>
     </div>
   );

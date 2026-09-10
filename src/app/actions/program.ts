@@ -77,6 +77,7 @@ const programSchema = z.object({
   gradientEnd: z.string().regex(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/),
   fontFamily: z.string(),
   templateId: z.string().trim().min(1).max(40),
+  removeLogo: z.enum(["yes", "no"]),
 });
 
 export async function updateProgram(
@@ -100,6 +101,7 @@ export async function updateProgram(
     gradientEnd: formData.get("gradientEnd"),
     fontFamily: formData.get("fontFamily"),
     templateId: formData.get("templateId"),
+    removeLogo: formData.get("removeLogo"),
   });
 
   if (!parsed.success || !isCardFont(parsed.data.fontFamily)) {
@@ -116,7 +118,8 @@ export async function updateProgram(
 
   // Existing logos can only be retained; a new URL must come from this
   // merchant's validated Blob upload below.
-  let logoUrl = merchant.logoUrl;
+  let logoUrl =
+    parsed.data.removeLogo === "yes" ? null : merchant.logoUrl;
   const logo = formData.get("logo");
   if (logo instanceof File && logo.size > 0) {
     try {
@@ -149,7 +152,7 @@ export async function updateProgram(
       },
     }),
   ]);
-  if (logoUrl && logoUrl !== merchant.logoUrl && merchant.logoUrl) {
+  if (logoUrl !== merchant.logoUrl && merchant.logoUrl) {
     await deleteMerchantImage(merchant.logoUrl).catch(() => undefined);
   }
   const passes = await prisma.pass.findMany({

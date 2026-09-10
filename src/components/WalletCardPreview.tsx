@@ -49,7 +49,7 @@ export function WalletCardPreview({
             <img
               src={logoUrl}
               alt=""
-              className={`h-11 w-11 shrink-0 bg-white object-cover ${
+              className={`h-11 w-11 shrink-0 bg-white object-contain p-1 ${
                 platform === "google" ? "rounded-full" : "rounded-xl"
               }`}
             />

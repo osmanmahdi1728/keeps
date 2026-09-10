@@ -2,6 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { settleInBatches } from "@/lib/campaign-delivery";
 import {
+  accessibleTextColor,
+  CARD_TEMPLATES,
+  contrastRatio,
+} from "@/lib/card-design";
+import {
   appleWalletReadiness,
   googleWalletReadiness,
   isExpectedApplePassType,
@@ -46,6 +51,21 @@ test("business types provide useful card-program defaults", () => {
     rewardLabel: "$15 off a full set",
     stampsRequired: 6,
   });
+});
+
+test("card styles stay varied and readable", () => {
+  assert.deepEqual(
+    new Set(CARD_TEMPLATES.map((template) => template.style)),
+    new Set(["minimal", "classic", "bold"]),
+  );
+  assert.ok(
+    CARD_TEMPLATES.every(
+      (template) =>
+        contrastRatio(template.primaryColor, template.backgroundColor) >= 4.5,
+    ),
+  );
+  assert.equal(accessibleTextColor("#111111"), "#ffffff");
+  assert.equal(accessibleTextColor("#f7f7f5"), "#111111");
 });
 
 test("Apple pass metadata and assets contain the branded Wallet fields", async () => {
