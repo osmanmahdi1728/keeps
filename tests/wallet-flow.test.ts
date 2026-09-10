@@ -19,7 +19,11 @@ import {
   passJson,
   type WalletPassModel,
 } from "@/lib/wallet/apple";
-import { googleLoyaltyClass, googleLoyaltyObject } from "@/lib/wallet/google";
+import {
+  googleLoyaltyClass,
+  googleLoyaltyObject,
+  isNotifyQuotaError,
+} from "@/lib/wallet/google";
 import { passDownloadTokenMatches } from "@/lib/wallet/pass-download-token";
 
 const model: WalletPassModel = {
@@ -66,6 +70,42 @@ test("card styles stay varied and readable", () => {
   );
   assert.equal(accessibleTextColor("#111111"), "#ffffff");
   assert.equal(accessibleTextColor("#f7f7f5"), "#111111");
+});
+
+test("only the note field notifies, and it uses Apple's %@ escape", () => {
+  const previousPassType = process.env.APPLE_PASS_TYPE_ID;
+  process.env.APPLE_PASS_TYPE_ID = "pass.com.example.keeps";
+  try {
+    const storeCard = passJson({ ...model, lastMessage: "Free coffee is ready" })
+      .storeCard as Record<string, { key: string; changeMessage?: string }[]>;
+    const notifying = Object.values(storeCard)
+      .flat()
+      .filter((field) => field.changeMessage !== undefined);
+    assert.deepEqual(
+      notifying.map((field) => field.key),
+      ["message"],
+    );
+    // Without %@ iOS silently swaps in a generic "Store card changed" alert.
+    assert.ok(
+      notifying.every((field) => field.changeMessage?.includes("%@")),
+    );
+  } finally {
+    if (previousPassType) {
+      process.env.APPLE_PASS_TYPE_ID = previousPassType;
+    } else {
+      delete process.env.APPLE_PASS_TYPE_ID;
+    }
+  }
+});
+
+test("Google notification quota errors fall back instead of throwing", () => {
+  assert.equal(isNotifyQuotaError({ status: 429 }), true);
+  assert.equal(
+    isNotifyQuotaError(new Error("QuotaExceededException: too many")),
+    true,
+  );
+  assert.equal(isNotifyQuotaError(new Error("invalid credentials")), false);
+  assert.equal(isNotifyQuotaError(null), false);
 });
 
 test("Apple pass metadata and assets contain the branded Wallet fields", async () => {

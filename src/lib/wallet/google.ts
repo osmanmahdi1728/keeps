@@ -161,27 +161,53 @@ export async function notifyGoogleObject(model: WalletPassModel, programId: stri
     return;
   }
   const client = await walletClient();
-  const object = {
-    ...googleLoyaltyObject(model, programId),
-    textModulesData: [
-      ...googleLoyaltyObject(model, programId).textModulesData,
-    ],
-    notifyPreference: "notifyOnUpdate",
-    messages: model.lastMessage
+  const base = googleLoyaltyObject(model, programId);
+  const url = `https://walletobjects.googleapis.com/walletobjects/v1/loyaltyObject/${base.id}`;
+  const message = (messageType: "TEXT" | "TEXT_AND_NOTIFY") =>
+    model.lastMessage
       ? [
           {
+            id: "keeps-latest",
             header: model.merchantName,
             body: model.lastMessage,
-            messageType: "TEXT_AND_NOTIFY",
+            messageType,
           },
         ]
-      : [],
-  };
-  await client.request({
-    url: `https://walletobjects.googleapis.com/walletobjects/v1/loyaltyObject/${object.id}`,
-    method: "PATCH",
-    data: object,
-  });
+      : [];
+
+  try {
+    await client.request({
+      url,
+      method: "PATCH",
+      // notifyPreference is ephemeral: Google only notifies when it is resent
+      // on every request.
+      data: { ...base, notifyPreference: "NOTIFY_ON_UPDATE", messages: message("TEXT_AND_NOTIFY") },
+    });
+  } catch (error) {
+    if (!isNotifyQuotaError(error)) {
+      throw error;
+    }
+    // Past 3 notifications in 24h. Still show the note on the pass, silently.
+    await client.request({
+      url,
+      method: "PATCH",
+      data: { ...base, messages: message("TEXT") },
+    });
+  }
+}
+
+export function isNotifyQuotaError(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) {
+    return false;
+  }
+  const status = (error as { status?: number; code?: number }).status ??
+    (error as { code?: number }).code;
+  if (status === 429) {
+    return true;
+  }
+  return /quotaexceeded/i.test(
+    (error as { message?: string }).message ?? "",
+  );
 }
 
 export async function createGoogleSaveJwt(model: WalletPassModel): Promise<string> {

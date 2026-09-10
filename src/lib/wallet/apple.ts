@@ -37,7 +37,6 @@ function hexToRgb(hex: string): string {
 export function passJson(model: WalletPassModel): Record<string, unknown> {
   const remaining = Math.max(model.stampsRequired - model.stampCount, 0);
   const t = (key: Parameters<typeof translate>[1]) => translate(model.locale, key);
-  const changeMessage = model.lastMessage ?? t("walletUpdated");
   return {
     formatVersion: 1,
     passTypeIdentifier: process.env.APPLE_PASS_TYPE_ID,
@@ -65,7 +64,6 @@ export function passJson(model: WalletPassModel): Record<string, unknown> {
           key: "stamps",
           label: t("walletStamps"),
           value: `${model.stampCount}/${model.stampsRequired}`,
-          changeMessage,
         },
       ],
       primaryFields: [
@@ -90,10 +88,14 @@ export function passJson(model: WalletPassModel): Record<string, unknown> {
         },
       ],
       backFields: [
+        // The only field carrying a changeMessage, so the lock screen alert is
+        // always this text. iOS drops the alert unless the message contains
+        // %@, and it shows just one field per update.
         {
           key: "message",
           label: t("walletLatest"),
           value: model.lastMessage ?? t("walletCollect"),
+          changeMessage: "%@",
         },
       ],
     },
