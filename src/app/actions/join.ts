@@ -84,6 +84,11 @@ export async function joinProgram(formData: FormData): Promise<{ error: string }
         authenticationToken: defaultAuthToken(),
       },
     });
+  } else if (pass.platform === "demo" && resolvedPlatform !== "demo") {
+    pass = await prisma.pass.update({
+      where: { id: pass.id },
+      data: { platform: resolvedPlatform },
+    });
   }
 
   if (pass.platform === "google" && isGoogleWalletConfigured()) {

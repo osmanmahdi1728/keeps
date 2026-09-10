@@ -12,7 +12,6 @@ export function MerchantNav({ shopName }: { shopName: string }) {
     { href: "/customers", label: t("customers") },
     { href: "/campaigns", label: t("campaigns") },
     { href: "/program", label: t("card") },
-    { href: "/website", label: t("website") },
   ] as const;
 
   return (

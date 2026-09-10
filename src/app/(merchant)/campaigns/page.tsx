@@ -3,6 +3,11 @@ import { prisma } from "@/lib/db";
 import { requireMerchant } from "@/lib/guards";
 import { getLocale } from "@/lib/i18n-server";
 import { translate } from "@/lib/i18n";
+import {
+  isAppleWalletConfigured,
+  isGoogleWalletConfigured,
+  isResendConfigured,
+} from "@/lib/config";
 
 export default async function CampaignsPage() {
   const merchant = await requireMerchant();
@@ -10,8 +15,14 @@ export default async function CampaignsPage() {
     return null;
   }
 
-  const [optedInCount, campaigns] = await Promise.all([
+  const [optedInCount, walletCount, campaigns] = await Promise.all([
     prisma.customer.count({ where: { programId: merchant.program.id, marketingOptIn: true } }),
+    prisma.pass.count({
+      where: {
+        customer: { programId: merchant.program.id },
+        platform: { in: ["apple", "google"] },
+      },
+    }),
     prisma.campaign.findMany({
       where: { programId: merchant.program.id },
       orderBy: { createdAt: "desc" },
@@ -29,7 +40,14 @@ export default async function CampaignsPage() {
           {t("campaignsHelp")}
         </p>
         <div className="mt-8">
-          <CampaignForm optedInCount={optedInCount} />
+          <CampaignForm
+            walletCount={walletCount}
+            optedInCount={optedInCount}
+            walletReady={
+              isAppleWalletConfigured() || isGoogleWalletConfigured()
+            }
+            emailReady={isResendConfigured()}
+          />
         </div>
       </div>
       <aside>

@@ -33,7 +33,33 @@ export function googleSaveUrl(jwt: string): string {
   return `https://pay.google.com/gp/v/save/${jwt}`;
 }
 
-function loyaltyClass(model: WalletPassModel, programId: string) {
+function walletLogo(model: WalletPassModel) {
+  if (!model.logoUrl) {
+    return undefined;
+  }
+  try {
+    const url = new URL(model.logoUrl);
+    if (
+      url.protocol !== "https:" ||
+      !url.hostname.endsWith(".public.blob.vercel-storage.com")
+    ) {
+      return undefined;
+    }
+    return {
+      sourceUri: { uri: url.toString() },
+      contentDescription: {
+        defaultValue: {
+          language: model.locale === "fr" ? "fr-CA" : "en-CA",
+          value: `${model.merchantName} logo`,
+        },
+      },
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+export function googleLoyaltyClass(model: WalletPassModel, programId: string) {
   const stamps = translate(model.locale, "walletStamps").toLocaleLowerCase(model.locale);
   return {
     id: classId(programId),
@@ -41,10 +67,11 @@ function loyaltyClass(model: WalletPassModel, programId: string) {
     reviewStatus: "UNDER_REVIEW",
     programName: `${model.merchantName} ${stamps}`,
     hexBackgroundColor: model.backgroundColor,
+    programLogo: walletLogo(model),
   };
 }
 
-function loyaltyObject(model: WalletPassModel, programId: string) {
+export function googleLoyaltyObject(model: WalletPassModel, programId: string) {
   const remaining = Math.max(model.stampsRequired - model.stampCount, 0);
   const t = (key: Parameters<typeof translate>[1]) => translate(model.locale, key);
   return {
@@ -96,8 +123,8 @@ export async function upsertGoogleLoyalty(model: WalletPassModel, programId: str
   }
 
   const client = await walletClient();
-  const cls = loyaltyClass(model, programId);
-  const object = loyaltyObject(model, programId);
+  const cls = googleLoyaltyClass(model, programId);
+  const object = googleLoyaltyObject(model, programId);
 
   try {
     await client.request({
@@ -135,9 +162,9 @@ export async function notifyGoogleObject(model: WalletPassModel, programId: stri
   }
   const client = await walletClient();
   const object = {
-    ...loyaltyObject(model, programId),
+    ...googleLoyaltyObject(model, programId),
     textModulesData: [
-      ...loyaltyObject(model, programId).textModulesData,
+      ...googleLoyaltyObject(model, programId).textModulesData,
     ],
     notifyPreference: "notifyOnUpdate",
     messages: model.lastMessage

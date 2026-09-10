@@ -8,14 +8,17 @@ import { prisma } from "@/lib/db";
 import { uniqueSlug } from "@/lib/slug";
 import { slugify } from "@/lib/ids";
 import { isCardFont } from "@/lib/card-design";
+import { isSiteKind } from "@/lib/site";
 import { deleteMerchantImage, saveMerchantLogo } from "@/lib/logo";
 import { getLocale } from "@/lib/i18n-server";
 import { translate } from "@/lib/i18n";
+import { refreshWalletPass } from "@/lib/wallet/update";
 
 const onboardingSchema = z.object({
   name: z.string().trim().min(2).max(80),
   rewardLabel: z.string().trim().min(2).max(80),
   stampsRequired: z.coerce.number().int().min(3).max(20),
+  siteKind: z.string().refine(isSiteKind),
 });
 
 export async function completeOnboarding(formData: FormData): Promise<{ error: string } | undefined> {
@@ -29,6 +32,7 @@ export async function completeOnboarding(formData: FormData): Promise<{ error: s
     name: formData.get("name"),
     rewardLabel: formData.get("rewardLabel"),
     stampsRequired: formData.get("stampsRequired"),
+    siteKind: formData.get("siteKind"),
   });
 
   if (!parsed.success) {
@@ -48,6 +52,7 @@ export async function completeOnboarding(formData: FormData): Promise<{ error: s
       userId: session.user.id,
       name: parsed.data.name,
       slug,
+      siteKind: parsed.data.siteKind,
       program: {
         create: {
           rewardLabel: parsed.data.rewardLabel,
@@ -57,7 +62,7 @@ export async function completeOnboarding(formData: FormData): Promise<{ error: s
     },
   });
 
-  redirect("/dashboard");
+  redirect("/program?setup=1");
 }
 
 const programSchema = z.object({
@@ -147,6 +152,11 @@ export async function updateProgram(
   if (logoUrl && logoUrl !== merchant.logoUrl && merchant.logoUrl) {
     await deleteMerchantImage(merchant.logoUrl).catch(() => undefined);
   }
+  const passes = await prisma.pass.findMany({
+    where: { customer: { programId: merchant.program.id } },
+    select: { id: true },
+  });
+  await Promise.allSettled(passes.map((pass) => refreshWalletPass(pass.id)));
   revalidatePath("/program");
   revalidatePath("/dashboard");
   revalidatePath(`/join/${merchant.slug}`);

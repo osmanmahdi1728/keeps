@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
 import { createApplePkpass } from "@/lib/wallet/apple";
 import { isAppleWalletConfigured } from "@/lib/config";
+import { authenticatePassDownload } from "@/lib/wallet/pass-download-auth";
 import { toPassModel } from "@/lib/wallet/update";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ serial: string }> },
 ) {
   const { serial } = await context.params;
@@ -13,14 +13,12 @@ export async function GET(
     return NextResponse.json({ error: "Apple Wallet is not configured yet." }, { status: 503 });
   }
 
-  const pass = await prisma.pass.findUnique({
-    where: { serial },
-    include: { customer: { include: { program: { include: { merchant: true } } } } },
-  });
-  if (!pass) {
-    return NextResponse.json({ error: "Pass not found" }, { status: 404 });
+  const auth = await authenticatePassDownload(request, serial);
+  if ("error" in auth) {
+    return auth.error;
   }
 
+  const pass = auth.pass;
   const merchant = pass.customer.program.merchant;
   const program = pass.customer.program;
   const buf = await createApplePkpass(

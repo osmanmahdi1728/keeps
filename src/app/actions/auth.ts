@@ -10,6 +10,7 @@ import { slugify, createToken, appUrl } from "@/lib/ids";
 import { uniqueSlug } from "@/lib/slug";
 import { getLocale } from "@/lib/i18n-server";
 import { translate } from "@/lib/i18n";
+import { isSiteKind } from "@/lib/site";
 import { passwordResetEmailHtml, sendEmail } from "@/lib/email/send";
 import {
   hashResetToken,
@@ -27,6 +28,7 @@ const registrationSchema = z
     confirmPassword: z.string(),
     rewardLabel: z.string().trim().min(2).max(80),
     stampsRequired: z.coerce.number().int().min(3).max(20),
+    siteKind: z.string().refine(isSiteKind),
   });
 
 export async function registerMerchant(
@@ -41,6 +43,7 @@ export async function registerMerchant(
     confirmPassword: formData.get("confirmPassword"),
     rewardLabel: formData.get("rewardLabel"),
     stampsRequired: formData.get("stampsRequired"),
+    siteKind: formData.get("siteKind"),
   });
 
   if (!parsed.success) {
@@ -69,6 +72,7 @@ export async function registerMerchant(
         create: {
           name: parsed.data.shopName,
           slug,
+          siteKind: parsed.data.siteKind,
           program: {
             create: {
               rewardLabel: parsed.data.rewardLabel,
@@ -83,7 +87,7 @@ export async function registerMerchant(
   await signIn("credentials", {
     email: parsed.data.email,
     password: parsed.data.password,
-    redirectTo: "/dashboard",
+    redirectTo: "/program?setup=1",
   });
 }
 

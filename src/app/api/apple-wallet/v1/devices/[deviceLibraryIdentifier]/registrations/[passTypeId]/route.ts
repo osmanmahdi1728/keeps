@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { isExpectedApplePassType } from "@/lib/config";
 
 export async function GET(
   request: Request,
@@ -7,7 +8,10 @@ export async function GET(
     params: Promise<{ deviceLibraryIdentifier: string; passTypeId: string }>;
   },
 ) {
-  const { deviceLibraryIdentifier } = await context.params;
+  const { deviceLibraryIdentifier, passTypeId } = await context.params;
+  if (!isExpectedApplePassType(passTypeId)) {
+    return NextResponse.json({ error: "Pass not found" }, { status: 404 });
+  }
   const url = new URL(request.url);
   const since = url.searchParams.get("passesUpdatedSince");
   const sinceDate = since ? new Date(Number(since) * 1000) : new Date(0);

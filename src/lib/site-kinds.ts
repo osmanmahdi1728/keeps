@@ -268,6 +268,31 @@ export function suggestProgram(kind: string): {
   };
 }
 
+export function siteKindLabel(kind: SiteKindId): LocalizedText {
+  switch (kind) {
+    case "cafe":
+      return { en: "Café", fr: "Café" };
+    case "bakery":
+      return { en: "Bakery", fr: "Boulangerie" };
+    case "juice":
+      return { en: "Juice bar", fr: "Bar à jus" };
+    case "bubbletea":
+      return { en: "Bubble tea", fr: "Thé aux perles" };
+    case "dessert":
+      return { en: "Dessert shop", fr: "Desserts" };
+    case "salon":
+      return { en: "Hair salon", fr: "Salon de coiffure" };
+    case "barber":
+      return { en: "Barbershop", fr: "Barbier" };
+    case "nails":
+      return { en: "Nail studio", fr: "Salon d’ongles" };
+    case "lashbrow":
+      return { en: "Lash & brow studio", fr: "Cils et sourcils" };
+    default:
+      return assertNever(kind);
+  }
+}
+
 function exploreLabel(family: SiteKindFamily): LocalizedText {
   switch (family) {
     case "crave":

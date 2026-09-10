@@ -1,12 +1,12 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { PassCard } from "@/components/PassCard";
-import { SaveToPhone } from "@/components/SaveToPhone";
-import { cardPageUrl } from "@/lib/card-url";
 import { isAppleWalletConfigured, isGoogleWalletConfigured } from "@/lib/config";
 import { getLocale } from "@/lib/i18n-server";
 import { translate } from "@/lib/i18n";
+import { inferJoinPlatform } from "@/lib/wallet/apple";
 
 export default async function JoinSuccessPage({
   params,
@@ -42,7 +42,7 @@ export default async function JoinSuccessPage({
   const program = pass.customer.program;
   const appleReady = isAppleWalletConfigured();
   const googleReady = isGoogleWalletConfigured();
-  const cardUrl = cardPageUrl(pass.serial, token);
+  const detectedPlatform = inferJoinPlatform((await headers()).get("user-agent"));
   const locale = await getLocale();
   const t = (key: Parameters<typeof translate>[1]) => translate(locale, key);
 
@@ -75,31 +75,64 @@ export default async function JoinSuccessPage({
           lastMessage={pass.lastMessage}
         />
       </div>
-      <div className="mt-8 w-full">
-        <SaveToPhone cardUrl={cardUrl} shopName={merchant.name} />
-      </div>
-      <Link href={`/card/${pass.serial}?t=${encodeURIComponent(token)}`} className="btn btn-ghost mt-3 w-full">
-        {t("openFullscreen")}
-      </Link>
-      <div className="mt-6 flex w-full flex-col gap-2">
-        {appleReady ? (
-          <a className="btn btn-ghost" href={`/api/passes/apple/${pass.serial}`}>
-            {t("addApple")}
-          </a>
+      <div className="mt-8 flex w-full flex-col gap-3">
+        {detectedPlatform === "google" && googleReady ? (
+          <WalletLink
+            href={`/api/passes/google/${pass.serial}?t=${encodeURIComponent(token)}`}
+            label={t("addGoogle")}
+            primary
+          />
         ) : null}
-        {googleReady ? (
-          <a className="btn btn-ghost" href={`/api/passes/google/${pass.serial}`}>
-            {t("addGoogle")}
-          </a>
-        ) : (
-          <p className="text-sm text-muted">
-            {t("walletsLater")}
-          </p>
-        )}
+        {detectedPlatform !== "google" && appleReady ? (
+          <WalletLink
+            href={`/api/passes/apple/${pass.serial}?t=${encodeURIComponent(token)}`}
+            label={t("addApple")}
+            primary
+          />
+        ) : null}
+        {appleReady && detectedPlatform === "google" ? (
+          <WalletLink
+            href={`/api/passes/apple/${pass.serial}?t=${encodeURIComponent(token)}`}
+            label={t("addApple")}
+          />
+        ) : null}
+        {googleReady && detectedPlatform !== "google" ? (
+          <WalletLink
+            href={`/api/passes/google/${pass.serial}?t=${encodeURIComponent(token)}`}
+            label={t("addGoogle")}
+          />
+        ) : null}
+        {!appleReady && !googleReady ? (
+          <div className="rounded-xl border border-line bg-card p-4 text-left">
+            <p className="font-semibold">{t("walletPreviewOnly")}</p>
+            <p className="mt-1 text-sm text-muted">{t("walletSetupPending")}</p>
+          </div>
+        ) : null}
       </div>
+      {!appleReady && !googleReady ? (
+        <Link href={`/card/${pass.serial}?t=${encodeURIComponent(token)}`} className="btn btn-ghost mt-3 w-full">
+          {t("openCardPreview")}
+        </Link>
+      ) : null}
       <Link href={`/join/${slug}`} className="mt-8 text-sm text-muted underline">
         {t("joinAnother")}
       </Link>
     </div>
+  );
+}
+
+function WalletLink({
+  href,
+  label,
+  primary = false,
+}: {
+  href: string;
+  label: string;
+  primary?: boolean;
+}) {
+  return (
+    <a className={`btn w-full ${primary ? "btn-primary" : "btn-ghost"}`} href={href}>
+      {label}
+    </a>
   );
 }

@@ -1,9 +1,12 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useState } from "react";
 import { updateProgram } from "@/app/actions/program";
-import { LoyaltyCard } from "@/components/LoyaltyCard";
-import { CARD_FONTS, CARD_TEMPLATES, fontCss } from "@/lib/card-design";
+import {
+  WalletCardPreview,
+  type WalletPreviewPlatform,
+} from "@/components/WalletCardPreview";
+import { CARD_TEMPLATES } from "@/lib/card-design";
 import { paletteFromImage } from "@/lib/palette-from-image";
 import { useI18n } from "@/components/I18nProvider";
 
@@ -19,10 +22,17 @@ type CardDesignerProps = {
   gradientEnd: string;
   fontFamily: string;
   templateId: string;
+  slug: string;
+  joinUrl: string;
+  appleReady: boolean;
+  googleReady: boolean;
 };
 
 export function CardDesigner(props: CardDesignerProps) {
   const { t } = useI18n();
+  const [step, setStep] = useState(0);
+  const [previewPlatform, setPreviewPlatform] =
+    useState<WalletPreviewPlatform>("apple");
   const [name, setName] = useState(props.name);
   const [rewardLabel, setRewardLabel] = useState(props.rewardLabel);
   const [stampsRequired, setStampsRequired] = useState(props.stampsRequired);
@@ -41,8 +51,6 @@ export function CardDesigner(props: CardDesignerProps) {
       updateProgram(formData),
     undefined,
   );
-
-  const previewFont = useMemo(() => fontCss(fontFamily), [fontFamily]);
 
   function applyTemplate(id: string) {
     const template = CARD_TEMPLATES.find((item) => item.id === id);
@@ -87,7 +95,47 @@ export function CardDesigner(props: CardDesignerProps) {
         <input type="hidden" name="templateId" value={templateId} />
         <input type="hidden" name="logoUrl" value={logoUrl.startsWith("blob:") ? props.logoUrl : logoUrl} />
 
-        <section>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-stamp">
+            {t("cardSetupProgress", { current: step + 1, total: 4 })}
+          </p>
+          <div className="mt-3 grid grid-cols-4 gap-2">
+            {[0, 1, 2, 3].map((item) => (
+              <span
+                key={`setup-progress-${item}`}
+                className="h-1.5 rounded-full"
+                style={{
+                  backgroundColor:
+                    item <= step ? accentColor : "var(--line)",
+                }}
+              />
+            ))}
+          </div>
+          <h2 className="font-serif mt-5 text-3xl">
+            {t(
+              step === 0
+                ? "cardSetupProgram"
+                : step === 1
+                  ? "cardSetupLook"
+                  : step === 2
+                    ? "cardSetupBrand"
+                    : "cardSetupLaunch",
+            )}
+          </h2>
+          <p className="mt-2 text-sm text-muted">
+            {t(
+              step === 0
+                ? "cardSetupProgramHelp"
+                : step === 1
+                  ? "cardSetupLookHelp"
+                  : step === 2
+                    ? "cardSetupBrandHelp"
+                    : "cardSetupLaunchHelp",
+            )}
+          </p>
+        </div>
+
+        <section className={step === 0 ? "block" : "hidden"}>
           <h2 className="font-serif text-2xl">{t("shop")}</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <label className="block text-sm font-semibold sm:col-span-2">
@@ -128,7 +176,7 @@ export function CardDesigner(props: CardDesignerProps) {
           </div>
         </section>
 
-        <section>
+        <section className={step === 1 ? "block" : "hidden"}>
           <h2 className="font-serif text-2xl">{t("templates")}</h2>
           <p className="mt-1 text-sm text-muted">{t("templatesHelp")}</p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -151,7 +199,7 @@ export function CardDesigner(props: CardDesignerProps) {
           </div>
         </section>
 
-        <section>
+        <section className={step === 2 ? "block" : "hidden"}>
           <h2 className="font-serif text-2xl">{t("logo")}</h2>
           <p className="mt-1 text-sm text-muted">{t("logoHelp")}</p>
           <label className="mt-4 block text-sm font-semibold">
@@ -167,7 +215,7 @@ export function CardDesigner(props: CardDesignerProps) {
           {paletteNote ? <p className="mt-2 text-sm text-muted">{paletteNote}</p> : null}
         </section>
 
-        <section>
+        <section className={step === 2 ? "block" : "hidden"}>
           <h2 className="font-serif text-2xl">{t("colorGrade")}</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <ColorField label={t("ink")} value={primaryColor} onChange={setPrimaryColor} />
@@ -177,23 +225,23 @@ export function CardDesigner(props: CardDesignerProps) {
           </div>
         </section>
 
-        <section>
-          <h2 className="font-serif text-2xl">{t("type")}</h2>
-          <div className="mt-4 grid gap-2 sm:grid-cols-2">
-            {CARD_FONTS.map((font) => (
-              <button
-                key={font.id}
-                type="button"
-                onClick={() => setFontFamily(font.id)}
-                className="rounded-xl border border-line px-4 py-3 text-left"
-                style={{
-                  fontFamily: font.css,
-                  borderColor: fontFamily === font.id ? "var(--ink)" : "var(--line)",
-                }}
-              >
-                {font.label}
-              </button>
-            ))}
+        <section className={step === 3 ? "block" : "hidden"}>
+          <div className="rounded-2xl border border-line bg-card p-5">
+            <p className="text-sm font-semibold">{t("walletReadiness")}</p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <WalletStatus label="Apple Wallet" ready={props.appleReady} />
+              <WalletStatus label="Google Wallet" ready={props.googleReady} />
+            </div>
+            <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-muted">
+              {t("customerJoinLink")}
+            </p>
+            <p className="mt-1 break-all font-mono text-xs">{props.joinUrl}</p>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`/api/qr/join/${props.slug}`}
+              alt={t("joinQr")}
+              className="mt-4 h-36 w-36 rounded-xl bg-white p-2"
+            />
           </div>
         </section>
 
@@ -201,14 +249,58 @@ export function CardDesigner(props: CardDesignerProps) {
         {state && "saved" in state ? (
           <p className="text-sm text-forest">{t("cardSaved")}</p>
         ) : null}
-        <button className="btn btn-primary" type="submit" disabled={pending}>
-          {pending ? t("saving") : t("saveCard")}
-        </button>
+        <div className="flex items-center justify-between gap-3">
+          {step > 0 ? (
+            <button
+              className="btn btn-ghost"
+              type="button"
+              onClick={() => setStep((current) => Math.max(0, current - 1))}
+            >
+              {t("back")}
+            </button>
+          ) : (
+            <span />
+          )}
+          {step < 3 ? (
+            <button
+              className="btn btn-primary"
+              type="button"
+              onClick={() => setStep((current) => Math.min(3, current + 1))}
+            >
+              {t("continue")}
+            </button>
+          ) : (
+            <button className="btn btn-primary" type="submit" disabled={pending}>
+              {pending ? t("saving") : t("saveAndLaunch")}
+            </button>
+          )}
+        </div>
       </form>
 
       <aside className="lg:sticky lg:top-8">
-        <p className="mb-3 text-sm font-semibold">{t("livePreview")}</p>
-        <LoyaltyCard
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <p className="text-sm font-semibold">{t("livePreview")}</p>
+          <div className="flex rounded-full border border-line bg-card p-1 text-xs font-semibold">
+            {(["apple", "google"] as const).map((platform) => (
+              <button
+                key={platform}
+                type="button"
+                className="rounded-full px-3 py-1.5 capitalize"
+                style={{
+                  backgroundColor:
+                    previewPlatform === platform ? "var(--ink)" : "transparent",
+                  color:
+                    previewPlatform === platform ? "var(--paper)" : "var(--ink)",
+                }}
+                onClick={() => setPreviewPlatform(platform)}
+              >
+                {platform}
+              </button>
+            ))}
+          </div>
+        </div>
+        <WalletCardPreview
+          platform={previewPlatform}
           merchantName={name || t("yourShop")}
           rewardLabel={rewardLabel || t("reward")}
           stampsRequired={stampsRequired || 10}
@@ -217,10 +309,20 @@ export function CardDesigner(props: CardDesignerProps) {
           backgroundColor={backgroundColor}
           primaryColor={primaryColor}
           accentColor={accentColor}
-          gradientEnd={gradientEnd}
-          fontFamily={previewFont}
         />
       </aside>
+    </div>
+  );
+}
+
+function WalletStatus({ label, ready }: { label: string; ready: boolean }) {
+  const { t } = useI18n();
+  return (
+    <div className="rounded-xl border border-line bg-white/70 p-3">
+      <p className="font-semibold">{label}</p>
+      <p className={`mt-1 text-xs ${ready ? "text-forest" : "text-muted"}`}>
+        {ready ? t("walletReadyToIssue") : t("walletPreviewMode")}
+      </p>
     </div>
   );
 }

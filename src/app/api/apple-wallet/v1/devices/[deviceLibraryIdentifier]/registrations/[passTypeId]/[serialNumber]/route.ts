@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { authenticateApplePass } from "@/lib/wallet/apple-auth";
+import { isExpectedApplePassType } from "@/lib/config";
 
 export async function POST(
   request: Request,
@@ -12,7 +13,11 @@ export async function POST(
     }>;
   },
 ) {
-  const { deviceLibraryIdentifier, serialNumber } = await context.params;
+  const { deviceLibraryIdentifier, passTypeId, serialNumber } =
+    await context.params;
+  if (!isExpectedApplePassType(passTypeId)) {
+    return NextResponse.json({ error: "Pass not found" }, { status: 404 });
+  }
   const auth = await authenticateApplePass(request, serialNumber);
   if ("error" in auth) {
     return auth.error;
@@ -51,7 +56,11 @@ export async function DELETE(
     }>;
   },
 ) {
-  const { deviceLibraryIdentifier, serialNumber } = await context.params;
+  const { deviceLibraryIdentifier, passTypeId, serialNumber } =
+    await context.params;
+  if (!isExpectedApplePassType(passTypeId)) {
+    return NextResponse.json({ error: "Pass not found" }, { status: 404 });
+  }
   const auth = await authenticateApplePass(request, serialNumber);
   if ("error" in auth) {
     return auth.error;

@@ -1,7 +1,13 @@
 import { CardDesigner } from "@/components/CardDesigner";
 import { requireMerchant } from "@/lib/guards";
+import {
+  appleWalletReadiness,
+  googleWalletReadiness,
+} from "@/lib/config";
+import { appUrl } from "@/lib/ids";
 import { getLocale } from "@/lib/i18n-server";
 import { translate } from "@/lib/i18n";
+import { customerEntryPath } from "@/lib/site";
 
 export default async function ProgramPage() {
   const merchant = await requireMerchant();
@@ -10,6 +16,8 @@ export default async function ProgramPage() {
     return null;
   }
   const locale = await getLocale();
+  const apple = appleWalletReadiness();
+  const google = googleWalletReadiness();
 
   return (
     <div>
@@ -30,6 +38,10 @@ export default async function ProgramPage() {
           gradientEnd={merchant.gradientEnd}
           fontFamily={merchant.fontFamily}
           templateId={merchant.templateId}
+          slug={merchant.slug}
+          joinUrl={`${appUrl()}${customerEntryPath(merchant.slug)}`}
+          appleReady={apple.ready}
+          googleReady={google.ready && google.publishing === "live"}
         />
       </div>
     </div>

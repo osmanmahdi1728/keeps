@@ -1,7 +1,9 @@
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { connect } from "node:http2";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
+import sharp from "sharp";
 import { appUrl, createToken } from "@/lib/ids";
 import { isAppleWalletConfigured } from "@/lib/config";
 import { sha1Hex, zipUncompressed } from "@/lib/wallet/zip";
@@ -43,6 +45,7 @@ export function passJson(model: WalletPassModel): Record<string, unknown> {
     teamIdentifier: process.env.APPLE_TEAM_ID,
     organizationName: model.merchantName,
     description: `${model.merchantName} — ${t("stampCard")}`,
+    logoText: model.logoUrl ? undefined : model.merchantName,
     foregroundColor: hexToRgb(model.primaryColor),
     backgroundColor: hexToRgb(model.backgroundColor),
     labelColor: hexToRgb(model.primaryColor),
@@ -97,11 +100,73 @@ export function passJson(model: WalletPassModel): Record<string, unknown> {
   };
 }
 
-function iconPng(): Uint8Array {
+function iconSvg(): Buffer {
   return Buffer.from(
-    "iVBORw0KGgoAAAANSUhEUgAAAD4AAAA+CAYAAABzz0z2AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAnUlEQVR4nO3YMQ6AIAxA0XL/QzNyExg6aKIm2v8SJwwk5bU0AKjW2ltmrtd7R8zM3DMjIu6Z+Xg+Z+Y9M1/P58y8Z+br+ZyZ98x8PZ8z856Zr+dzZt4z8/V8zsx7Zr6ez5l5z8zX8zkz75n5ej5n5j0zX8/nzLxn5uv5nJn3zHw9nzPznpmv53Nm3jPz9XzOzHtmvp7PmXnPzNfzOTPvmfl6PmfmPTNfz+fMvGfm6/mcmffMfD2fM/OemQ8AAAD//wMAF8gG3m9x0nQAAAAASUVORK5CYII=",
-    "base64",
+    '<svg xmlns="http://www.w3.org/2000/svg" width="87" height="87" viewBox="0 0 87 87"><rect width="87" height="87" rx="19" fill="#1c1914"/><path d="M26 20h10v19l16-19h13L47 41l19 26H53L40 49l-4 5v13H26z" fill="#f4efe6"/></svg>',
   );
+}
+
+type PassAsset = { name: string; data: Uint8Array };
+export const APPLE_PASS_ASSET_NAMES = [
+  "icon.png",
+  "icon@2x.png",
+  "icon@3x.png",
+  "logo.png",
+  "logo@2x.png",
+] as const;
+
+async function merchantLogo(url: string | null): Promise<Buffer | null> {
+  if (!url) {
+    return null;
+  }
+  try {
+    const parsed = new URL(url);
+    if (
+      parsed.protocol !== "https:" ||
+      !parsed.hostname.endsWith(".public.blob.vercel-storage.com")
+    ) {
+      return null;
+    }
+    const response = await fetch(parsed, {
+      cache: "force-cache",
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (!response.ok) {
+      return null;
+    }
+    const bytes = Buffer.from(await response.arrayBuffer());
+    return bytes.byteLength <= 1_000_000 ? bytes : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function createApplePassAssets(
+  model: WalletPassModel,
+): Promise<PassAsset[]> {
+  const fallback = await sharp(iconSvg()).png().toBuffer();
+  const uploadedLogo = await merchantLogo(model.logoUrl);
+  const logoSource = uploadedLogo ?? fallback;
+  const image = (source: Buffer) =>
+    sharp(source, { limitInputPixels: 16_000_000 }).png();
+
+  return [
+    { name: "icon.png", data: await image(fallback).resize(29, 29).toBuffer() },
+    { name: "icon@2x.png", data: await image(fallback).resize(58, 58).toBuffer() },
+    { name: "icon@3x.png", data: await image(fallback).resize(87, 87).toBuffer() },
+    {
+      name: "logo.png",
+      data: await image(logoSource)
+        .resize(160, 50, { fit: "contain" })
+        .toBuffer(),
+    },
+    {
+      name: "logo@2x.png",
+      data: await image(logoSource)
+        .resize(320, 100, { fit: "contain" })
+        .toBuffer(),
+    },
+  ];
 }
 
 function run(command: string, args: string[]): Promise<void> {
@@ -124,14 +189,14 @@ export async function createApplePkpass(model: WalletPassModel): Promise<Buffer>
   }
 
   const json = Buffer.from(JSON.stringify(passJson(model)));
-  const icon = iconPng();
+  const assets = await createApplePassAssets(model);
   const manifest = Buffer.from(
-    JSON.stringify({
-      "pass.json": sha1Hex(json),
-      "icon.png": sha1Hex(icon),
-      "paula.r@example.org": sha1Hex(icon),
-      "carlos.r@example.net": sha1Hex(icon),
-    }),
+    JSON.stringify(
+      Object.fromEntries([
+        ["pass.json", sha1Hex(json)],
+        ...assets.map((asset) => [asset.name, sha1Hex(asset.data)]),
+      ]),
+    ),
   );
 
   const dir = await mkdtemp(join(tmpdir(), "keeps-pass-"));
@@ -172,9 +237,7 @@ export async function createApplePkpass(model: WalletPassModel): Promise<Buffer>
       { name: "pass.json", data: json },
       { name: "manifest.json", data: manifest },
       { name: "signature", data: signature },
-      { name: "icon.png", data: icon },
-      { name: "paula.r@example.org", data: icon },
-      { name: "carlos.r@example.net", data: icon },
+      ...assets,
     ]);
   } finally {
     await rm(dir, { recursive: true, force: true });
@@ -185,7 +248,52 @@ export async function sendApplePush(pushToken: string): Promise<void> {
   if (!isAppleWalletConfigured()) {
     return;
   }
-  console.info("[keeps apple push queued]", pushToken.slice(0, 8));
+  const cert = Buffer.from(process.env.APPLE_PASS_CERT ?? "", "base64").toString(
+    "utf8",
+  );
+  const key = Buffer.from(process.env.APPLE_PASS_KEY ?? "", "base64").toString(
+    "utf8",
+  );
+  const passphrase = process.env.APPLE_PASS_KEY_PASSPHRASE || undefined;
+  const topic = process.env.APPLE_PASS_TYPE_ID ?? "";
+
+  await new Promise<void>((resolve, reject) => {
+    const client = connect("https://api.push.apple.com", {
+      cert,
+      key,
+      passphrase,
+    });
+    client.once("error", reject);
+    client.setTimeout(8_000, () => {
+      client.destroy();
+      reject(new Error("Apple Wallet push timed out."));
+    });
+    const request = client.request({
+      ":method": "POST",
+      ":path": `/3/device/${encodeURIComponent(pushToken)}`,
+      "apns-topic": topic,
+      "apns-push-type": "background",
+      "apns-priority": "5",
+    });
+    request.setEncoding("utf8");
+    request.on("response", (headers) => {
+      const status = Number(headers[":status"] ?? 500);
+      request.resume();
+      request.on("end", () => {
+        client.close();
+        if (status === 200) {
+          resolve();
+        } else {
+          reject(new Error(`Apple Wallet push failed (${status}).`));
+        }
+      });
+    });
+    request.once("error", (error) => {
+      client.close();
+      reject(error);
+    });
+    request.end("{}");
+  });
 }
 
 export function defaultAuthToken(): string {

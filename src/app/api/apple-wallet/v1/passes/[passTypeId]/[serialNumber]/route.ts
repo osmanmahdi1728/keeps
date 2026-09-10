@@ -2,13 +2,19 @@ import { NextResponse } from "next/server";
 import { authenticateApplePass } from "@/lib/wallet/apple-auth";
 import { createApplePkpass } from "@/lib/wallet/apple";
 import { toPassModel } from "@/lib/wallet/update";
-import { isAppleWalletConfigured } from "@/lib/config";
+import {
+  isAppleWalletConfigured,
+  isExpectedApplePassType,
+} from "@/lib/config";
 
 export async function GET(
   request: Request,
   context: { params: Promise<{ passTypeId: string; serialNumber: string }> },
 ) {
-  const { serialNumber } = await context.params;
+  const { passTypeId, serialNumber } = await context.params;
+  if (!isExpectedApplePassType(passTypeId)) {
+    return NextResponse.json({ error: "Pass not found" }, { status: 404 });
+  }
   const auth = await authenticateApplePass(request, serialNumber);
   if ("error" in auth) {
     return auth.error;

@@ -10,6 +10,7 @@ import { refreshWalletPass } from "@/lib/wallet/update";
 import { campaignEmailHtml, sendEmail } from "@/lib/email/send";
 import { getLocale } from "@/lib/i18n-server";
 import { translate } from "@/lib/i18n";
+import { settleInBatches } from "@/lib/campaign-delivery";
 
 const campaignSchema = z.object({
   channel: z.enum(["wallet", "email"]),
@@ -58,51 +59,67 @@ export async function sendCampaign(formData: FormData): Promise<{ error: string 
   });
 
   let sent = 0;
+  let failed = 0;
 
-  switch (channel) {
-    case "wallet": {
-      const passes = await prisma.pass.findMany({
-        where: { customer: { programId: merchant.program.id } },
-      });
-      for (const pass of passes) {
-        await prisma.pass.update({
-          where: { id: pass.id },
-          data: { lastMessage: parsed.data.body },
+  try {
+    switch (channel) {
+      case "wallet": {
+        const passes = await prisma.pass.findMany({
+          where: { customer: { programId: merchant.program.id } },
         });
-        await refreshWalletPass(pass.id);
-        sent += 1;
-      }
-      break;
-    }
-    case "email": {
-      const customers = await prisma.customer.findMany({
-        where: { programId: merchant.program.id, marketingOptIn: true },
-      });
-      for (const customer of customers) {
-        await sendEmail({
-          to: customer.email,
-          subject: parsed.data.subject ?? merchant.name,
-          html: campaignEmailHtml(
-            merchant.name,
-            parsed.data.body,
-            customer.unsubscribeToken,
-            customer.locale === "fr" ? "fr" : "en",
-          ),
+        const results = await settleInBatches(passes, async (pass) => {
+          await prisma.pass.update({
+            where: { id: pass.id },
+            data: { lastMessage: parsed.data.body },
+          });
+          await refreshWalletPass(pass.id);
         });
-        sent += 1;
+        sent = results.sent;
+        failed = results.failed;
+        break;
       }
-      break;
+      case "email": {
+        const customers = await prisma.customer.findMany({
+          where: { programId: merchant.program.id, marketingOptIn: true },
+        });
+        const results = await settleInBatches(customers, async (customer) => {
+          await sendEmail({
+            to: customer.email,
+            subject: parsed.data.subject ?? merchant.name,
+            html: campaignEmailHtml(
+              merchant.name,
+              parsed.data.body,
+              customer.unsubscribeToken,
+              customer.locale === "fr" ? "fr" : "en",
+            ),
+          });
+        });
+        sent = results.sent;
+        failed = results.failed;
+        break;
+      }
+      default:
+        return assertNever(channel);
     }
-    default:
-      return assertNever(channel);
+  } catch {
+    failed += 1;
   }
 
   await prisma.campaign.update({
     where: { id: campaign.id },
-    data: { status: "sent", sentCount: sent, sentAt: new Date() },
+    data: {
+      status: failed === 0 ? "sent" : "failed",
+      sentCount: sent,
+      sentAt: new Date(),
+    },
   });
 
   revalidatePath("/campaigns");
+  if (failed > 0) {
+    return {
+      error: translate(locale, "campaignPartiallyFailed", { sent, failed }),
+    };
+  }
   return { sent };
 }
 

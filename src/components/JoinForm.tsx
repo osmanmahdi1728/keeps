@@ -6,7 +6,7 @@ import { useI18n } from "@/components/I18nProvider";
 
 export function JoinForm({ slug, shopName }: { slug: string; shopName: string }) {
   const { locale, t } = useI18n();
-  const [state, action] = useActionState(
+  const [state, action, pending] = useActionState(
     async (_prev: { error: string } | undefined, formData: FormData) => joinProgram(formData),
     undefined,
   );
@@ -31,8 +31,8 @@ export function JoinForm({ slug, shopName }: { slug: string; shopName: string })
         </span>
       </label>
       {state?.error ? <p className="text-sm text-stamp">{state.error}</p> : null}
-      <button className="btn btn-primary w-full" type="submit">
-        {t("getCard")}
+      <button className="btn btn-primary w-full" type="submit" disabled={pending}>
+        {pending ? t("creatingCard") : t("createWalletCard")}
       </button>
     </form>
   );

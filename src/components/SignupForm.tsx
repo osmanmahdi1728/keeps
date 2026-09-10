@@ -1,11 +1,20 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { registerMerchant } from "@/app/actions/auth";
 import { useI18n } from "@/components/I18nProvider";
+import {
+  SITE_KIND_PROFILES,
+  siteKindLabel,
+  suggestProgram,
+  type SiteKindId,
+} from "@/lib/site-kinds";
 
 export function SignupForm() {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
+  const [siteKind, setSiteKind] = useState<SiteKindId>("cafe");
+  const [rewardLabel, setRewardLabel] = useState("Free drink");
+  const [stampsRequired, setStampsRequired] = useState(10);
   const [state, action, pending] = useActionState(
     async (_previous: { error: string } | undefined, formData: FormData) =>
       registerMerchant(formData),
@@ -47,6 +56,27 @@ export function SignupForm() {
           autoComplete="email"
         />
       </label>
+      <label className="block text-sm font-semibold">
+        {t("businessType")}
+        <select
+          className="field mt-1"
+          name="siteKind"
+          value={siteKind}
+          onChange={(event) => {
+            const kind = event.target.value as SiteKindId;
+            const suggestion = suggestProgram(kind);
+            setSiteKind(kind);
+            setRewardLabel(suggestion.rewardLabel);
+            setStampsRequired(suggestion.stampsRequired);
+          }}
+        >
+          {SITE_KIND_PROFILES.map((profile) => (
+            <option key={profile.id} value={profile.id}>
+              {siteKindLabel(profile.id)[locale]}
+            </option>
+          ))}
+        </select>
+      </label>
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block text-sm font-semibold">
           {t("password")}
@@ -80,7 +110,8 @@ export function SignupForm() {
             className="field mt-1"
             name="rewardLabel"
             required
-            defaultValue="15% off"
+            value={rewardLabel}
+            onChange={(event) => setRewardLabel(event.target.value)}
             maxLength={80}
           />
         </label>
@@ -93,7 +124,8 @@ export function SignupForm() {
             required
             min={3}
             max={20}
-            defaultValue={10}
+            value={stampsRequired}
+            onChange={(event) => setStampsRequired(Number(event.target.value))}
           />
         </label>
       </div>
