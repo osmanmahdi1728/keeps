@@ -71,7 +71,9 @@ function nameFor(place: z.infer<typeof nominatimPlaceSchema>): string {
   );
 }
 
-function safeWebsite(extratags: Record<string, string> | undefined): string {
+function safeWebsite(
+  extratags: Record<string, string> | null | undefined,
+): string {
   const candidate =
     extratags?.website || extratags?.["contact:website"] || extratags?.url || "";
   if (!candidate) {

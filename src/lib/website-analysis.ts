@@ -2,7 +2,7 @@ import { Buffer } from "node:buffer";
 import { resolve4, resolve6 } from "node:dns/promises";
 import http, { type IncomingMessage } from "node:http";
 import https from "node:https";
-import { isIP } from "node:net";
+import { isIP, type LookupFunction } from "node:net";
 import { z } from "zod";
 
 const MAX_HTML_BYTES = 600_000;
@@ -63,36 +63,22 @@ type ResolvedPublicUrl = {
   family: 4 | 6;
 };
 
-type LookupCallback = (
-  err: NodeJS.ErrnoException | null,
-  address?: string | Array<{ address: string; family: number }>,
-  family?: number,
-) => void;
-
 // Node 22's http/https client always calls custom lookup with `{ all: true }`.
 // The older `(err, address, family)` callback leaves `address` undefined.
-export function pinnedLookup(address: string, family: 4 | 6) {
-  return (
-    _hostname: string,
-    options: unknown,
-    callback?: LookupCallback,
-  ): void => {
-    const cb: LookupCallback | undefined =
-      typeof options === "function" ? options : callback;
-    if (!cb) {
-      throw new Error("DNS lookup callback missing.");
-    }
-    if (
-      options &&
+export function pinnedLookup(address: string, family: 4 | 6): LookupFunction {
+  return ((_hostname, options, callback) => {
+    const cb = typeof options === "function" ? options : callback;
+    const wantsAll =
       typeof options === "object" &&
+      options !== null &&
       "all" in options &&
-      (options as { all?: boolean }).all
-    ) {
+      Boolean((options as { all?: boolean }).all);
+    if (wantsAll) {
       cb(null, [{ address, family }]);
       return;
     }
     cb(null, address, family);
-  };
+  }) as LookupFunction;
 }
 
 function stripMarkup(value: string): string {
